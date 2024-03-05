@@ -1,5 +1,5 @@
 
-# mcstatsim
+# mcstatsim (under dev)
 
 ## Monte Carlo Simulation Tools Using a Functional Approach
 
