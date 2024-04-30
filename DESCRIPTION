@@ -1,0 +1,19 @@
+Package: mcstatsim
+Type: Package
+Title: Monte Carlo Simulation Tools Using a Functional Approach
+Version: 0.1.0
+Author: Imad EL BADISY
+Maintainer: Imad EL BADISY <elbadisyimad@gmail.com>
+Description: The mcstatsim package offers an efficient, functional programming-based 
+    approach for statistical simulations, centralizing the process in a single higher-order 
+    function for better manageability. Besides, it includes ready-to-use functions for well-known 
+    simulation targets. The core `runsim()` function processes simulation 
+    parameters via expanded grid, mapping them to the simulation function. 
+    Replication management is performed through the `replicater()` function, which estimates 
+    the remaining time (ETA) with an option to hide progress via `show_progress = FALSE`. 
+    Outputs are deliberately structured as dataframe to simplify analysis and visualization, 
+    addressing the limitations of list outputs in data manipulation.
+License: AGPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
