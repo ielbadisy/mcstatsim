@@ -6,7 +6,7 @@ output: github_document
 
 ## Monte Carlo Simulation Tools Using a Functional Approach
 
-The `mcstatsim` package is a lightweight, dependency-free tool designed to facilitate statistical simulations through functional programming. It centralizes the simulation process into a single higher-order function, enhancing manageability and usability without adding overhead from external dependencies. The package includes ready-to-use functions for common simulation targets and processes simulation parameters via lists or expanded grids, all while utilizing parallel processing to improve efficiency on macOS and Linux-based distributions.
+The `mcstatsim` package is a lightweight, dependency-free tool designed to facilitate statistical simulations through functional programming. It centralizes the simulation process into a single higher-order function, enhancing manageability and usability without adding overhead from external dependencies. The package includes ready-to-use functions for common simulation targets and processes simulation parameters via lists or expanded grids, all while utilizing parallel processing on multicore mode to improve efficiency on macOS and Linux-based distributions.
 
 
 ## Installation
@@ -30,7 +30,7 @@ library(mcstatsim)
 sim_function <- function(a, b) {
   Sys.sleep(0.2)  # Simulate a time-consuming process
   return(data.frame(result = a + b))
-}
+  }
 
 # Generate a grid of parameters
 params <- expand.grid(a = 1:3, b = 4:6)
@@ -72,7 +72,7 @@ simulate_and_analyze <- function(n, intercept, slope, noise_sd) {
     n = n, 
     noise_sd = noise_sd
   )
- }
+  }
 ```
 
 ### Step 2: Set Up Simulation Parameters
@@ -159,6 +159,3 @@ Contributions to `mcstatsim` are welcome! Please refer to the [CONTRIBUTING.md](
 
 `mcstatsim` is licensed under the AGPL-3. Please see the [LICENSE](LICENSE.md) file for more details.
 
-## Contact
-
-For questions or feedback, please contact the package maintainer at `elbadisyimad@gmail.com`.
