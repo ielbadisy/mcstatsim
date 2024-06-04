@@ -2,38 +2,43 @@
 % Please edit documentation in R/mcpmap.R
 \name{mcpmap}
 \alias{mcpmap}
-\title{Parallel map over a list using multiple cores}
+\title{Parallel Map Over a List Using Multiple Coers}
 \usage{
 mcpmap(lists, func, num_cores = parallel::detectCores() - 1)
 }
 \arguments{
-\item{lists}{A list of lists containing the arguments to pass to the function `func`. Each inner list should
-correspond to an argument of `func`, and all lists must be of the same length.}
+\item{lists}{A list of lists where each inner list contains the arguments to be passed to the function `func`.
+Each inner list should correspond to an argument of `func`, and all lists must have the same length.}
 
-\item{func}{The function to apply to each set of arguments contained in `lists`.}
+\item{func}{The function to apply to each set of arguments contained in `lists`. The function should be capable
+of handling input as specified in `lists`.}
 
-\item{num_cores}{The number of cores to use for parallel execution. The default is
-one less than the total number of cores available on the system to leave resources
-for other processes.}
+\item{num_cores}{The number of cores to use for parallel execution. This defaults to one less than the total number
+of cores available on the system, leaving resources free for other processes.}
 }
 \value{
-The result of applying `func` to the elements of `lists` in parallel. The return value is a list of the
-same length as the input lists, where each element is the result of applying `func` to the corresponding elements
-of the input lists.
+A list of results, where each element is the result from applying `func` to the corresponding elements of
+        the input lists. The length of the return list is the same as the length of the input lists.
 }
 \description{
-Applies a function in parallel over elements of a list of elements with the same length with support for multiple cores.
-The function uses `parallel::mcmapply` under the hood to perform the parallel computation, automatically determining the number
-of cores to use if not specified.
+This function applies a given function in parallel over elements of a list. It uses `parallel::mcmapply` on Unix-like
+systems and `parallel::parLapply` on Windows. This approach ensures cross-platform compatibility by automatically
+adjusting to the appropriate method of parallel execution depending on the operating system.
+}
+\note{
+On Windows systems, since `mcmapply` is not supported due to the lack of forking ability, this function
+      uses a parallel socket cluster (`parLapply`) instead. Users are advised that parallel execution on Windows
+      involves creating and managing a cluster, which might introduce some overhead compared to forking on Unix-like systems.
 }
 \examples{
-# Define a function to apply
+# Define a function to be applied
 sum_func <- function(x, y) x + y
 
 # Create a list of arguments
-args_list <- list(c(1,2,3), c(4,5,6))
+args_list <- list(c(1,2,3), to = c(4,5,6))
 
 # Apply the function in parallel
 results <- mcpmap(args_list, sum_func, num_cores = 2)
 print(results)
 }
+\keyword{parallel}
