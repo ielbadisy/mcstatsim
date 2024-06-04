@@ -74,12 +74,11 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     cat("Using", num_cores, "core(s) for parallel simulations:\nStarting simulations...\n")
   }
 
-  # execute simulations using replicater and mcpmap
   tryCatch({
     res <- as.list(replicater(n, expr = {mcpmap(lists = grid_params, func = sim_func, num_cores = num_cores)}, show_progress = show_progress))
-    }, error = function(e) {
+  }, error = function(e) {
     cat("An error occurred during simulation: ", e$message, "\n")
-    return(NULL)
+    #return(NULL)
   })
 
   combined_results <- combine_df(res)
