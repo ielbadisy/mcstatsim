@@ -79,22 +79,36 @@ estimates. For this aim, we well set up the following simulation design:
 5)  Use the following simulation targets to compute the distortion
     between beta from `data_complete` and beta `data_imputed`:
 
-- **Bias**: Bias measures the average deviation of the estimated
-  coefficients from the true coefficients.
+<!-- end list -->
 
-$$\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})$$
+  - **Bias**: Bias measures the average deviation of the estimated
+    coefficients from the true coefficients.
 
-- **Coverage**: Coverage is the proportion of times the true coefficient
-  value falls within the estimated confidence interval across all
-  simulations.
+  
+![&#10;\\text{Bias} = \\frac{1}{N} \\sum\_{i=1}^{N} (\\hat{\\beta}\_i -
+\\beta\_{\\text{true}})&#10;](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%0A%5Ctext%7BBias%7D%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bi%3D1%7D%5E%7BN%7D%20%28%5Chat%7B%5Cbeta%7D_i%20-%20%5Cbeta_%7B%5Ctext%7Btrue%7D%7D%29%0A
+"
+\\text{Bias} = \\frac{1}{N} \\sum_{i=1}^{N} (\\hat{\\beta}_i - \\beta_{\\text{true}})
+")  
 
-$$\text{Coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\beta_{\text{true}} \in \text{CI}_i)$$
+  - **Coverage**: Coverage is the proportion of times the true
+    coefficient value falls within the estimated confidence interval
+    across all simulations.
 
-- **Mean Squared Error (MSE)**: MSE combines both the variance of the
-  estimator and its bias, providing a single measure of estimation
-  quality.
+  
+![\\text{Coverage} = \\frac{1}{N} \\sum\_{i=1}^{N}
+\\mathbf{1}(\\beta\_{\\text{true}} \\in
+\\text{CI}\_i)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%5Ctext%7BCoverage%7D%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bi%3D1%7D%5E%7BN%7D%20%5Cmathbf%7B1%7D%28%5Cbeta_%7B%5Ctext%7Btrue%7D%7D%20%5Cin%20%5Ctext%7BCI%7D_i%29
+"\\text{Coverage} = \\frac{1}{N} \\sum_{i=1}^{N} \\mathbf{1}(\\beta_{\\text{true}} \\in \\text{CI}_i)")  
 
-$$\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})^2$$
+  - **Mean Squared Error (MSE)**: MSE combines both the variance of the
+    estimator and its bias, providing a single measure of estimation
+    quality.
+
+  
+![\\text{MSE} = \\frac{1}{N} \\sum\_{i=1}^{N} (\\hat{\\beta}\_i -
+\\beta\_{\\text{true}})^2](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%5Ctext%7BMSE%7D%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bi%3D1%7D%5E%7BN%7D%20%28%5Chat%7B%5Cbeta%7D_i%20-%20%5Cbeta_%7B%5Ctext%7Btrue%7D%7D%29%5E2
+"\\text{MSE} = \\frac{1}{N} \\sum_{i=1}^{N} (\\hat{\\beta}_i - \\beta_{\\text{true}})^2")  
 
 *NB*: All these metrics are already implemented in the `mcstatsim`
 package (see `?calc_bias()`, `?calc_coverage()`, and `?calc_rmse()`.
@@ -280,29 +294,29 @@ parameters.
 
 ## Features
 
-- **No Dependencies**: `mcstatsim` is designed to be lightweight and
-  standalone, requiring no additional packages for its core
-  functionalities, simplifying installation and usage.
+  - **No Dependencies**: `mcstatsim` is designed to be lightweight and
+    standalone, requiring no additional packages for its core
+    functionalities, simplifying installation and usage.
 
-- **Functional programming approach**: Streamlines the process of
-  setting up and running simulations.
+  - **Functional programming approach**: Streamlines the process of
+    setting up and running simulations.
 
-- **Parallel execution**: Leverages multiple cores to speed up the
-  execution of simulations.
+  - **Parallel execution**: Leverages multiple cores to speed up the
+    execution of simulations.
 
-- **Structured output**: Returns simulation results in a dataframe,
-  facilitating quick analysis and visualization.
+  - **Structured output**: Returns simulation results in a dataframe,
+    facilitating quick analysis and visualization.
 
 ## Limitations
 
-- **Parallel processing mode**: `mcstatsim` utilizes parallel processing
-  in *multicore mode*, which is only available on macOS and Linux-based
-  distributions. Users on Windows may experience reduced performance or
-  need to adjust for single-threaded execution.
+  - **Parallel processing mode**: `mcstatsim` utilizes parallel
+    processing in *multicore mode*, which is only available on macOS and
+    Linux-based distributions. Users on Windows may experience reduced
+    performance or need to adjust for single-threaded execution.
 
 ## Contributing
 
-Contributions to `mcstatsim` are welcome! Please refer to the
+Contributions to `mcstatsim` are welcome\! Please refer to the
 [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to make
 contributions.
 
