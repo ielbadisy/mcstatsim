@@ -2,12 +2,11 @@
 output: github_document
 ---
 
-# mcstatsim
+# `mcstatsim` package
 
 ## Monte Carlo Simulation Tools Using a Functional Approach
 
 The `mcstatsim` package is a lightweight, dependency-free tool designed to facilitate statistical simulations through functional programming. It centralizes the simulation process into a single higher-order function, enhancing manageability and usability without adding overhead from external dependencies. The package includes ready-to-use functions for common simulation targets and processes simulation parameters via lists or expanded grids, all while utilizing parallel processing on multicore mode to improve efficiency on macOS and Linux-based distributions.
-
 
 ## Installation
 
@@ -44,112 +43,205 @@ This example demonstrates how to define a simple simulation function, create a g
 
 ## Working example
 
-We'll create a naive scenario where we simulate simple regression data and fit a linear model to this data. This will demonstrate the creation of a simulation function, setting up parameters, and using mcstatsim to run these simulations in parallel.
+To illustrate the utility of our package in a concrete (yet  simple) [CORRECT AND COMPLETE the SENTENCE]... 
+. This will demonstrate the creation of a simulation function, setting up parameters, and using mcstatsim to run these simulations in parallel.
 
-### Step 1: Define the Simulation Function
+Simulation aim: We will to assess the performance of  somme imputation methods regarding their capacity to preserve the values of coefficients estimates. For this aim, we well set up the following simulation design: 
 
-This function will generate data based on a linear relationship with added random noise. We'll then fit a linear model to this data.
+
+(1) Generate fully observed data -> `data_complete`
+(2) estimate the beta coefficients values from `data_complete`
+(3) Introduce missigness under MCAR to complete dataset generated in (1) -> `data_missing`
+(4) impute the dataset generated at (3) -> `data_imputed`
+(5) Use the following simulation targets to compute the distortion between beta from `data_complete` and beta `data_imputed`: 
+  
+  - Bias  [ADD FORMULA]
+  - Coverage [ADD FORMULA]
+  - MSE [ADD FORMULA]
+  
+
+### Step 1: Define the helpers functions 
+
+Since we want to preserve the spirit of the functional prgramming style, all our simulation design step will decmposed as helper function. In others words, the simulation steps will be translated to functions as follow: 
+
 ```{r}
-simulate_and_analyze <- function(n, intercept, slope, noise_sd) {
-  # Generate explanatory variable
-  x <- runif(n, 0, 10)
+## (1) Generate fully observed data -> `data_complete`
+gencox <- function(n = 700, maxTime = 7, logHR = 0.5) {
+  lambda <- 0.1
+  rho <- 1.6
+  rateC <- 0.09
+
+  # Covariates
+  x1 <- rnorm(n)
+  x2 <- x1^2 + x1 + runif(n)
+  x3 <- rbinom(n, 1, 0.5)
+
+  # Estimated survival times
+  U <- runif(n)
+  Tlat <- (-log(U) / (lambda * exp(logHR * (x1 + x2 + x3))))^(1 / rho)
+  Ctimes <- rexp(n, rate = rateC)
+
+  # Follow-up times and event indicators
+  time <- pmin(Tlat, Ctimes)
+  status <- as.numeric(Tlat <= Ctimes)
+  time <- ifelse(time > maxTime, maxTime, time)
+  status <- ifelse(time >= maxTime, 1, status)
   
-  # Generate response variable with noise
-  y <- intercept + slope * x + rnorm(n, mean = 0, sd = noise_sd)
+  data <- data.frame(time, status, x1, x2, x3)
+  data$x3 <- as.factor(data$x3)
   
-  # Fit a linear model
-  fit <- lm(y ~ x)
+  return(data)
+  }
+
+## (2) estimate the beta coefficients values from `data_complete`
+estimate_coxest <- function(data) {
+  myFormula <- survival::Surv(time, status) ~ x1 + x2 + x3
+  coefs <- summary(survival::coxph(myFormula, data = data))$coef
+  coefs[, 1]
+}
+
+
+
+## (3) Introduce missigness under MCAR to complete dataset generated in (1) -> `data_missing`
+introduce_MCAR <- function(x, covariates = names(x), p = 0.3) {
   
-  # Extract coefficients
-  coeffs <- coef(fit)
+  stopifnot(is.data.frame(x), p >= 0 && p <= 1, all(covariates %in% names(x)))
+  x[covariates] <- lapply(x[covariates], function(z) {
+    z[sample(length(z), floor(p * length(z)))] <- NA
+    z
+  })
   
-  # Return a dataframe containing the coefficients and their standard errors
-  data.frame(
-    intercept_est = coeffs["(Intercept)"],
-    slope_est = coeffs["x"],
-    intercept_se = summary(fit)$coefficients["(Intercept)", "Std. Error"],
-    slope_se = summary(fit)$coefficients["x", "Std. Error"],
-    n = n, 
-    noise_sd = noise_sd
-  )
+  return(x)
+}
+
+
+## (4) impute the dataset generated at (3) -> `data_imputed`
+imputer <- function(data, method) {
+  stopifnot(is.data.frame(data))
+  if (is.factor(method)) {method <- as.character(method)}
+
+  supported_methods <- c("knn", "cart", "missforest", "missranger", "misscforest", "complete")
+  stopifnot(method %in% supported_methods)
+  
+  data_imputed <- switch(method,
+                 knn = VIM::kNN(data)[names(data)],
+                 cart = simputation::impute_cart(data, .~.),
+                 missforest = missForest::missForest(data, xtrue = data, verbose = FALSE)$ximp,
+                 missranger = missRanger::missRanger(data, pmm.k = 5, num.trees = 100, verbose = 0),
+                 misscforest = suppressWarnings(missCforest::missCforest(data, ntree = 10L)),
+                 complete = data[stats::complete.cases(data), ])
+  
+  return(data_imputed)
+  }
+
+
+## (5) compute the simulation targets
+evaluate_coxest <- function(data, truelogHR) {
+  myFormula <- survival::Surv(time, status) ~ x1 + x2 + x3
+  coefs <- summary(survival::coxph(myFormula, data = data))$coef
+  estimates <- as.data.frame(coefs)
+  
+  out <- data.frame(
+    estimates = estimates$coef,
+    ci_lower = estimates$coef - 1.96 * estimates$`se(coef)`,
+    ci_upper = estimates$coef + 1.96 * estimates$`se(coef)`
+    )
+  
+  out$bias <- mcstatsim::calc_bias(out$estimates, truelogHR)$bias
+  out$coverage <- mcstatsim::calc_coverage(out$ci_lower, out$ci_upper, truelogHR)$coverage
+  out$rmse <- mcstatsim::calc_rmse(out$estimates, truelogHR)$rmse
+  
+  return(out)
   }
 ```
 
-### Step 2: Set Up Simulation Parameters
+## Step 2: Define the simulation function 
 
-We will create a grid of parameters to test different scenarios. For simplicity, we'll vary the number of observations and the standard deviation of the noise.
 ```{r}
-params_grid <- expand.grid(
-  n = c(100, 200),
-  intercept = 2,
-  slope = 3,
-  noise_sd = c(1, 2)
-  )
-```
-
-### Step 3: Run Simulations Using mcstatsim
-
-Assuming mcstatsim is correctly set up for parallel processing, we use it to run simulations:
-```{r}
-library(mcstatsim)
-# Ensure mcstatsim is installed and loaded
-# install.packages("devtools")  # Uncomment if devtools is not installed
-# devtools::install_github("your_github_username/mcstatsim")  # Adjust as necessary
-
-results <- mcstatsim::runsim(n = 50, grid_params = params_grid, sim_func = simulate_and_analyze)
-head(results)
+simcox <- function(n, logHR, pmiss, covariates = c("x2"), method = method){
+  data_complete <- gencox(n = n)
+  truelogHR <- estimate_coxest(data_complete)
+  data_missing <- introduce_MCAR(data_complete, covariates = covariates, p = pmiss)
+  data_imputed <- imputer(data_missing, method = method)
+  res_est <- evaluate_coxest(data_missing, truelogHR = truelogHR)
+  res <- cbind(n, pmiss, method, covariates, res_est, row.names = NULL)
+  return(res)
+  }
 ```
 
 
-### Step 4: Summerizing results
+## Step 3: Define the parameters of the simulation 
+
+Now, to link our simulation function to the simulation parameters, we will generate a grid of paremeters with the same names as the argument of simulation function: 
 ```{r}
-library(dplyr)
-library(ggplot2)
-
-summary_results <- results %>%
-  group_by(n, ID, noise_sd) %>%
-  summarise(
-    mean_intercept = mean(intercept_est),
-    sd_intercept = sd(intercept_est),
-    mean_slope = mean(slope_est),
-    sd_slope = sd(slope_est),
-    .groups = 'drop'  # This option removes the grouping structure after summarisation
-  )
-
-# Plotting Intercept Estimates
-library(ggplot2)
-ggplot(summary_results, aes(x = factor(n), y = mean_intercept, fill = factor(noise_sd))) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  geom_errorbar(aes(ymin = mean_intercept - sd_intercept, ymax = mean_intercept + sd_intercept),
-                width = .2, position = position_dodge(.9)) +
-  labs(title = "Intercept Estimates Across Different Conditions",
-       x = "Sample Size",
-       y = "Mean Intercept",
-       fill = "Noise SD") +
-  theme_minimal()
-
-# Plotting Slope  Estimates
-ggplot(summary_results, aes(x = factor(n), y = mean_slope, fill = factor(noise_sd))) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  geom_errorbar(aes(ymin = mean_slope - sd_slope, ymax = mean_slope + sd_slope),
-                width = .2, position = position_dodge(.9)) +
-  labs(title = "Slope Estimates Across Different Conditions",
-       x = "Sample Size",
-       y = "Mean Slope",
-       fill = "Noise SD") +
-  theme_minimal()
+params <- expand.grid(n = c(200, 1000), 
+                      logHR = 0.5,
+                      pmiss = c(0.2, 0.5),
+                      method = c("knn", "cart", "missforest", "missranger", "misscforest", "complete"))
 ```
+
+
+
+## Step 4: Run the simulation
+
+```{r}
+## load necessary packages to un the simulation
+pacman::p_load(mcstatsim, survival, missRanger, missCforest, missForest, VIM, simputation, ggplot2, tidyr)
+
+set.seed(123)
+
+sim_res <- runsim(n = 3, 
+                  grid_params = params, 
+                  sim_func = simcox)
+```
+
+
+### Step 5: Summerize the results
+
+- Plot 
+```{r}
+sim_res$bias <- abs(sim_res$bias)
+## Plot the results
+sim_res2 <- gather(sim_res, metric, value, c(bias, rmse))
+ggplot(sim_res2, aes(x=value, y=method, fill=method)) +
+  stat_summary(fun=mean, geom="point", shape=20, size=3, color="red") + # Add mean points
+  theme_minimal() +
+  theme(axis.text.x = element_text(hjust = 1),
+        legend.position = "none") +
+  labs(x = "", y = "") +
+  facet_grid(pmiss~metric, scales="free")
+```
+
+- Table 
+
+```{r}
+
+res2 %>% group_by(covariates, method) %>%
+   summarise(Bias = mean(bias),
+             Empirical_SE = mean(se_est),
+             Relative_bias = mean(bias_rel),
+             CI_length = mean(lo95 - hi95),
+             CI_coverage = mean(cover))%>%
+  round_df(4) -> res_estimates
+
+```
+
+All right, we will skip the intepretation of the results since the simulation design is not complete (we need include more simulation targetts, assess under different hyperameters values, ..etc.). But this gives a fair idea on how one can use the mcstatsim package to organise the monte carlo simulation in a simple but yet efficient way, with no need to use for loop and all the complexities that add in complex setting with a lot of parameters. 
+
+Also mcstatsim, restrict the organsiation of the simulation results in a single data frame in order to make the production of results straighforeward. This could be a limitation in nsome cases but the choice was liberaly made to avoid the overload of dealing with multiple files after the simulation is finished. 
+
+---
 
 ## Features
 
 - **No Dependencies**: `mcstatsim` is designed to be lightweight and standalone, requiring no additional packages for its core functionalities, simplifying installation and usage.
-- **Functional programming approach**: Streamlines the process of setting up and running simulations.
+- **Functional programming approach**: Streamlines the process of setting up and running simulations. 
 - **Parallel execution**: Leverages multiple cores to speed up the execution of simulations.
 - **Structured output**: Returns simulation results in a dataframe, facilitating analysis and visualization.
 
 ## Limitations
 
-- **Parallel processing mode**: `mcstatsim` utilizes parallel processing in multicore mode, which is only available on macOS and Linux-based distributions. Users on Windows may experience reduced performance or need to adjust for single-threaded execution.
+- **Parallel processing mode**: `mcstatsim` utilizes parallel processing in _multicore mode_, which is only available on macOS and Linux-based distributions. Users on Windows may experience reduced performance or need to adjust for single-threaded execution.
 
 ## Contributing
 
