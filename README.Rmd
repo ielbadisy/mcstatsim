@@ -272,10 +272,6 @@ Let's skip interpreting the results since the simulation design isn't complete y
 - **Structured output**: Returns simulation results in a dataframe, facilitating quick analysis and visualization.
 
 
-## Limitations
-
-- **Parallel processing mode**: `mcstatsim` utilizes parallel processing in _multicore mode_, which is only available on macOS and Linux-based distributions. Users on Windows may experience reduced performance or need to adjust for single-threaded execution.
-
 ## Contributing
 
 Contributions to `mcstatsim` are welcome! Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to make contributions.
