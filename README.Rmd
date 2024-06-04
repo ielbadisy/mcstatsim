@@ -71,7 +71,9 @@ To illustrate the utility of this package in a concrete example, we will simulat
   
 - **Bias**: Bias measures the average deviation of the estimated coefficients from the true coefficients. 
   
-$$\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})$$
+$$
+\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})
+$$
    
 
 - **Coverage**: Coverage is the proportion of times the true coefficient value falls within the estimated confidence interval across all simulations. 
