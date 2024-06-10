@@ -26,9 +26,11 @@ that can be row-bound.}
 \item{show_progress}{Logical indicating whether to display progress messages
 during the execution of the simulations.}
 
-\item{num_cores}{The number of cores to use for parallel execution. The default is
-one less than the total number of cores available on the system to leave resources
-for other processes.}
+\item{num_cores}{The number of cores to use for parallel execution. By default, the
+number is set to one less than the total number of cores available on the system
+to leave resources for other processes. On Windows, due to the lack of support for
+multicore execution using forking, the default is set to 1 regardless of the number
+of cores available.}
 }
 \value{
 A dataframe combining the results of all simulations, with an additional

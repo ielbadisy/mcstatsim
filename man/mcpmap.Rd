@@ -2,7 +2,7 @@
 % Please edit documentation in R/mcpmap.R
 \name{mcpmap}
 \alias{mcpmap}
-\title{Parallel Map Over a List Using Multiple Cores}
+\title{Parallel Map Over Lists Using Multiple Cores}
 \usage{
 mcpmap(lists, func, num_cores = parallel::detectCores() - 1)
 }
@@ -12,23 +12,24 @@ Each inner list should correspond to an argument of `func`, and all lists must h
 
 \item{func}{The function to apply to each set of arguments contained in `lists`.}
 
-\item{num_cores}{The number of cores to use for parallel execution. This defaults to one less
-than the total number of cores available on the system, leaving resources free for other processes.
-Note: On Windows, `num_cores` is automatically set to 1 due to limitations in parallel processing support.}
+\item{num_cores}{The number of cores to use for parallel execution, defaulting to the number of cores
+available on the system minus one. On Windows, due to lack of support for multicore execution using
+forking, the default is set to 1.}
 }
 \value{
-A list of results, where each element is the result from applying `func` to the corresponding elements of
-the input lists.
+A list of results, each element being the result from applying `func` to the corresponding elements
+of the input lists.
 }
 \description{
 This function applies a given function in parallel over elements of a list.
-It uses `parallel::mcmapply` on Unix-like systems and `parallel::parLapply` on Windows,
-ensuring cross-platform compatibility.
+It uses `parallel::mcmapply` on Unix-like systems and `parallel::parLapply` on Windows.
+This approach ensures cross-platform compatibility.
 }
 \examples{
 sum_func <- function(x, y) x + y
-args_list <- list(c(1,2,3), c(4,5,6))
+args_list <- list(c(1, 2, 3), c(4, 5, 6))
 results <- mcpmap(args_list, sum_func, num_cores = 2)
-print(results)
 }
-\keyword{parallel}
+\seealso{
+\code{\link[parallel]{mcmapply}}, \code{\link[parallel]{parLapply}}
+}

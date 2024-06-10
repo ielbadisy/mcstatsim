@@ -318,10 +318,3 @@ calc_relative_rmse <- function(estimates, true_param) {
 
   return(list(rel_rmse = relative_rmse, rel_rmse_mcse = relative_rmse_mcse))
 }
-
-
-
-
-
-
-
