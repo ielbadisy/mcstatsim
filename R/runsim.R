@@ -13,9 +13,11 @@
 #' that can be row-bound.
 #' @param show_progress Logical indicating whether to display progress messages
 #' during the execution of the simulations.
-#' @param num_cores The number of cores to use for parallel execution. The default is
-#' one less than the total number of cores available on the system to leave resources
-#' for other processes.
+#' @param num_cores The number of cores to use for parallel execution. By default, the
+#' number is set to one less than the total number of cores available on the system
+#' to leave resources for other processes. On Windows, due to the lack of support for
+#' multicore execution using forking, the default is set to 1 regardless of the number
+#' of cores available.
 #'
 #' @return A dataframe combining the results of all simulations, with an additional
 #' column to identify the set of parameters (from `grid_params`) used for each simulation.
@@ -65,9 +67,14 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     stop("'sim_func' must be a function.")
   }
 
-  if (num_cores < 1 || num_cores > parallel::detectCores()) {
-    warning("'num_cores' should be between 1 and the maximum number of available cores. Adjusting to default.")
-    num_cores <- parallel::detectCores() - 1
+
+  # Adjust num_cores based on OS
+  if (is.null(num_cores)) {  # If not explicitly specified
+    if (.Platform$OS.type == "windows") {
+      num_cores <- 1  # Override num_cores to 1 on Windows
+    } else {
+      num_cores <- parallel::detectCores() - 1
+    }
   }
 
   if (show_progress) {
