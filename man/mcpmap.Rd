@@ -2,7 +2,7 @@
 % Please edit documentation in R/mcpmap.R
 \name{mcpmap}
 \alias{mcpmap}
-\title{Parallel Map Over a List Using Multiple Coers}
+\title{Parallel Map Over a List Using Multiple Cores}
 \usage{
 mcpmap(lists, func, num_cores = parallel::detectCores() - 1)
 }
@@ -10,34 +10,24 @@ mcpmap(lists, func, num_cores = parallel::detectCores() - 1)
 \item{lists}{A list of lists where each inner list contains the arguments to be passed to the function `func`.
 Each inner list should correspond to an argument of `func`, and all lists must have the same length.}
 
-\item{func}{The function to apply to each set of arguments contained in `lists`. The function should be capable
-of handling input as specified in `lists`.}
+\item{func}{The function to apply to each set of arguments contained in `lists`.}
 
-\item{num_cores}{The number of cores to use for parallel execution. This defaults to one less than the total number
-of cores available on the system, leaving resources free for other processes.}
+\item{num_cores}{The number of cores to use for parallel execution. This defaults to one less
+than the total number of cores available on the system, leaving resources free for other processes.
+Note: On Windows, `num_cores` is automatically set to 1 due to limitations in parallel processing support.}
 }
 \value{
 A list of results, where each element is the result from applying `func` to the corresponding elements of
-        the input lists. The length of the return list is the same as the length of the input lists.
+the input lists.
 }
 \description{
-This function applies a given function in parallel over elements of a list. It uses `parallel::mcmapply` on Unix-like
-systems and `parallel::parLapply` on Windows. This approach ensures cross-platform compatibility by automatically
-adjusting to the appropriate method of parallel execution depending on the operating system.
-}
-\note{
-On Windows systems, since `mcmapply` is not supported due to the lack of forking ability, this function
-      uses a parallel socket cluster (`parLapply`) instead. Users are advised that parallel execution on Windows
-      involves creating and managing a cluster, which might introduce some overhead compared to forking on Unix-like systems.
+This function applies a given function in parallel over elements of a list.
+It uses `parallel::mcmapply` on Unix-like systems and `parallel::parLapply` on Windows,
+ensuring cross-platform compatibility.
 }
 \examples{
-# Define a function to be applied
 sum_func <- function(x, y) x + y
-
-# Create a list of arguments
-args_list <- list(c(1,2,3), to = c(4,5,6))
-
-# Apply the function in parallel
+args_list <- list(c(1,2,3), c(4,5,6))
 results <- mcpmap(args_list, sum_func, num_cores = 2)
 print(results)
 }
