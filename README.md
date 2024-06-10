@@ -82,9 +82,7 @@ estimates. For this aim, we well set up the following simulation design:
 - **Bias**: Bias measures the average deviation of the estimated
   coefficients from the true coefficients.
 
-$$
-\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})
-$$
+$$\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})$$
 
 - **Coverage**: Coverage is the proportion of times the true coefficient
   value falls within the estimated confidence interval across all
@@ -254,7 +252,7 @@ ggplot(sim_res2, aes(x=value, y=method, fill=method)) +
 #ggsave("quick_res.png")
 ```
 
-![](quick_res.png)
+![](man/figures/quick_res.png)
 
 ``` r
 library(dplyr)
@@ -297,11 +295,5 @@ parameters.
 
 ## Contributing
 
-Contributions to `mcstatsim` are welcome! Please refer to the
-[CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to make
-contributions.
-
-## License
-
-`mcstatsim` is licensed under the AGPL-3. Please see the
-[LICENSE](LICENSE.md) file for more details.
+Contributions are welcome! If you’d like to help improve `mcstatsim`,
+please feel free to submit a pull request.
