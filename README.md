@@ -83,7 +83,7 @@ estimates. For this aim, we well set up the following simulation design:
   coefficients from the true coefficients.
 
 $$
-\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})
+\text{Bias}(\hat{\beta}) = E[\hat{\beta}] - \beta_{\text{true}}
 $$
 
 - **Coverage**: Coverage is the proportion of times the true coefficient
@@ -99,7 +99,7 @@ $$
   quality.
 
 $$
-\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})^2
+\text{MSE} = E[(\hat{\beta} - \beta_{\text{true}})^2]
 $$
 
 *NB*: All these metrics are already implemented in the `mcstatsim`
