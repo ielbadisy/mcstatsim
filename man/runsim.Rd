@@ -58,7 +58,7 @@ parallel execution.
 \examples{
 # Define a simple simulation function
 sim_function <- function(a, b) {
-  Sys.sleep(0.1) # Simulating a time-consuming process
+  Sys.sleep(0.02) # Simulating a time-consuming process
   return(data.frame(result = a + b))
 }
 
