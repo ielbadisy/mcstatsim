@@ -37,7 +37,7 @@ library(mcstatsim)
 
 # Define a simple simulation function
 sim_function <- function(a, b) {
-  Sys.sleep(0.2)  # Simulate a time-consuming process
+  Sys.sleep(0.1)  # Simulate a time-consuming process
   return(data.frame(result = a + b))
   }
 
@@ -45,7 +45,7 @@ sim_function <- function(a, b) {
 params <- expand.grid(a = 1:3, b = 4:6)
 
 # Run simulations
-results <- runsim(n = 5, grid_params = params, sim_func = sim_function)
+results <- runsim(n = 3, grid_params = params, sim_func = sim_function)
 ```
 
 This example demonstrates how to define a simple simulation function, create a grid of parameters for the simulation, and run the simulations in parallel using `mcstatsim`.
@@ -96,7 +96,7 @@ Since we want to preserve the spirit of the functional prgramming style, all our
 pacman::p_load(mcstatsim, survival, dplyr, ggplot2)
 
 ## (1) generate fully observed data -> `data_complete`
-gencox <- function(n = 700, maxTime = 7, logHR = 0.5) {
+gencox <- function(n = 300, maxTime = 7, logHR = 0.5) {
   lambda <- 0.1
   rho <- 1.6
   rateC <- 0.09
@@ -201,7 +201,7 @@ simcox <- function(n, logHR, pmiss, covariates = c("x2"), method = method){
 Now, to link our simulation function to the simulation parameters, we will generate a grid of paremeters with the same names as the argument of simulation function: 
 
 ```{r}
-params <- expand.grid(n = c(200, 1000), 
+params <- expand.grid(n = c(200, 500), 
                       logHR = 0.5,
                       pmiss = c(0.2, 0.5),
                       method = c("knn", "cart", "missforest", "missranger",
