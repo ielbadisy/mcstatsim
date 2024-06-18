@@ -29,7 +29,7 @@ combine_df <- function(nested_list) {
     stop("The input must be a non-empty list of lists containing dataframes.")
   }
 
-  # initialize an empty list to store combined data frames from each group
+  # initialize an empty list to store combined data frames
   combined_dfs <- list()
 
   # loop through each group in the nested list
