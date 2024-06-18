@@ -2,14 +2,14 @@ Package: mcstatsim
 Type: Package
 Title: Monte Carlo Statistical Simulation Tools Using a Functional Approach
 Version: 0.1.0
-Author: Imad EL BADISY
-Maintainer: Imad EL BADISY <elbadisyimad@gmail.com>
+Authors@R: c(person("Imad", "EL BADISY", 
+      role = c("aut", "cre","cph"),
+    email = "elbadisyimad@gmail.com"))
 Description: 
-    The `mcstatsim` package is a lightweight, dependency-free tool designed to facilitate statistical 
+    A lightweight, dependency-free tool designed to facilitate statistical 
     simulations through functional programming. It centralizes the simulation process into a single 
     higher-order function, enhancing manageability and usability without adding overhead from external 
-    dependencies. The package includes ready-to-use functions for common simulation targets and processes 
-    simulation parameters via lists or expanded grids, all while utilizing parallel processing to improve efficiency.
+    dependencies. The package includes ready-to-use functions for common simulation targets and processes. A detailed example can be found on <https://github.com/ielbadisy/mcstatsim>.
 License: AGPL (>= 3)
 Encoding: UTF-8
 LazyData: true
