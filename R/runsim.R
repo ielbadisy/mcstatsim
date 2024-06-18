@@ -37,7 +37,7 @@
 #' @examples
 #' # Define a simple simulation function
 #' sim_function <- function(a, b) {
-#'   Sys.sleep(0.1) # Simulating a time-consuming process
+#'   Sys.sleep(0.02) # Simulating a time-consuming process
 #'   return(data.frame(result = a + b))
 #' }
 #'
@@ -68,10 +68,10 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   }
 
 
-  # Adjust num_cores based on OS
+  # adjust num_cores based on OS
   if (is.null(num_cores)) {  # If not explicitly specified
     if (.Platform$OS.type == "windows") {
-      num_cores <- 1  # Override num_cores to 1 on Windows
+      num_cores <- 1  # override num_cores to 1 on Windows
     } else {
       num_cores <- parallel::detectCores() - 1
     }

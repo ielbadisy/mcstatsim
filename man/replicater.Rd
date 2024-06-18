@@ -30,5 +30,5 @@ arrival (ETA) calculated based on the average time per iteration.
 results <- replicater(5, rnorm(1), show_progress = FALSE)
 
 # Example with progress - might take longer due to Sys.sleep()
-results_with_delay <- replicater(10, {Sys.sleep(0.5); rnorm(1)}, show_progress = TRUE)
+results_with_delay <- replicater(10, {Sys.sleep(0.2); rnorm(1)}, show_progress = TRUE)
 }
