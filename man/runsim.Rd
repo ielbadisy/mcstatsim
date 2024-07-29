@@ -34,10 +34,20 @@ The function first validates the input parameters. It then uses parallel process
 The results are combined into a single dataframe.
 }
 \examples{
+\dontrun{
+library(mcstatsim)
+
+# Define a simple simulation function
 sim_function <- function(a, b) {
-  Sys.sleep(1) # Simulating a time-consuming process
+  Sys.sleep(0.1)  # Simulate a time-consuming process
   return(data.frame(result = a + b))
 }
-grid_params <- expand.grid(a = 1:3, b = 4:6)
-runsim(n = 2, grid_params = grid_params, sim_func = sim_function, num_cores = 2)
+
+# Generate a grid of parameters
+params <- expand.grid(a = 1:3, b = 4:6)
+
+# Run simulations
+results <- runsim(n = 1, grid_params = params, sim_func = sim_function)
+print(results)
+}
 }
