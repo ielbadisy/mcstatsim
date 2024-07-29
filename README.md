@@ -14,11 +14,9 @@ targets**.
 The core `runsim()` function processes simulation parameters via
 expanded grid, mapping them to the simulation function.
 
-Replication management is performed through the `replicater()` function,
-which estimates the remaining time (ETA) with an option to hide progress
-via `show_progress = FALSE`. Outputs are deliberately structured as
-dataframe to simplify analysis and visualization, addressing the
-limitations of list outputs in data manipulation.
+Outputs are deliberately structured as dataframe to simplify analysis
+and visualization, addressing the limitations of list outputs in data
+manipulation.
 
 ## Installation
 
@@ -39,7 +37,7 @@ library(mcstatsim)
 
 # Define a simple simulation function
 sim_function <- function(a, b) {
-  Sys.sleep(0.1)  # Simulate a time-consuming process
+  Sys.sleep(0.5)  # Simulate a time-consuming process
   return(data.frame(result = a + b))
   }
 
@@ -47,7 +45,7 @@ sim_function <- function(a, b) {
 params <- expand.grid(a = 1:3, b = 4:6)
 
 # Run simulations
-results <- runsim(n = 3, grid_params = params, sim_func = sim_function)
+results <- runsim(n = 3, grid_params = params, sim_func = sim_function, show_progress = TRUE)
 ```
 
 This example demonstrates how to define a simple simulation function,
@@ -77,33 +75,29 @@ estimates. For this aim, we well set up the following simulation design:
 4)  impute the dataset generated at (3) -\> `data_imputed`
 
 5)  Use the following simulation targets to compute the distortion
-    between beta from `data_complete` and beta `data_imputed`:
+    between $\beta_{true}$ from `data_complete` and $\beta_i$ from
+    `data_imputed`:
 
 - **Bias**: Bias measures the average deviation of the estimated
   coefficients from the true coefficients.
 
-$$
-\text{Bias}(\hat{\beta}) = E[\hat{\beta}] - \beta_{\text{true}}
-$$
+$$\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})$$
 
 - **Coverage**: Coverage is the proportion of times the true coefficient
   value falls within the estimated confidence interval across all
   simulations.
 
-$$
-\text{Coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\beta_{\text{true}} \in \text{CI}_i)
-$$
+$$\text{Coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\beta_{\text{true}} \in \text{CI}_i)$$
 
 - **Mean Squared Error (MSE)**: MSE combines both the variance of the
   estimator and its bias, providing a single measure of estimation
   quality.
 
-$$
-\text{MSE} = E[(\hat{\beta} - \beta_{\text{true}})^2]
-$$
+$$\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})^2$$
 
-*NB*: All these metrics are already implemented in the `mcstatsim`
-package (see `?calc_bias()`, `?calc_coverage()`, and `?calc_rmse()`.
+*NB*: All these metrics (and more) are already implemented in the
+`mcstatsim` package (see `?calc_bias()`, `?calc_coverage()`, and
+`?calc_rmse()`.
 
 ### Step 1: Define the helpers
 
@@ -234,8 +228,8 @@ params <- expand.grid(n = c(200, 500),
 In one line of code, we can lunch our simulation:
 
 ``` r
-pacman::p_load(survival, missRanger, missCforest, missForest, VIM, simputation, ggplot2, tidyr)
-sim_res <- mcstatsim::runsim(n = 3, grid_params = params, sim_func = simcox)
+set.seed(123)
+sim_res <- runsim(n = 100, grid_params = params, sim_func = simcox, show_progress = FALSE, num_cores = 6)
 ```
 
 ### Step 5: summerize the results
@@ -255,27 +249,10 @@ ggplot(sim_res2, aes(x=value, y=method, fill=method)) +
   labs(x = "", y = "") +
   facet_grid(pmiss~metric, scales="free")
 
-#ggsave("quick_res.png")
+ggsave("quick_res.png")
 ```
 
 ![](man/figures/quick_res.png)
-
-``` r
-library(dplyr)
-summary_table <- sim_res %>%
-  group_by(n, pmiss, method) %>%  # Group by number of observations, missingness, and method
-  summarise(
-    Mean_Estimate = mean(estimates),
-    Mean_CI_Lower = mean(ci_lower),
-    Mean_CI_Upper = mean(ci_upper),
-    Mean_Bias = mean(bias),
-    Coverage = mean(coverage),
-    Mean_RMSE = mean(rmse),
-    .groups = 'drop' 
-  )
-
-knitr::kable(summary_table, format = "markdown", caption = "Summary of Simulation Results")
-```
 
 Let’s skip interpreting the results since the simulation design isn’t
 complete yet—we need to add more simulation targets and assess different
@@ -286,18 +263,25 @@ parameters.
 
 ## Features
 
-- **No Dependencies**: `mcstatsim` is designed to be lightweight and
-  standalone, requiring no additional packages for its core
-  functionalities, simplifying installation and usage.
-
 - **Functional programming approach**: Streamlines the process of
   setting up and running simulations.
 
-- **Parallel execution**: Leverages multiple cores to speed up the
+- **Parallel execution**: Leverages parallel computing to speed up the
   execution of simulations.
 
 - **Structured output**: Returns simulation results in a dataframe,
   facilitating quick analysis and visualization.
+
+## Summary of Changes in Version 0.5.0
+
+The major improvement in version 0.5.0 compared to version 0.1.0 is the
+integration of parallel computing support using the `future` package
+backend within the `pbapply` package. This enhancement overcomes the
+previous limitation, which only supported multicore parallel computing
+on Unix-based operating systems through `parallel::mcmapply()`. With
+this update, `mcstatsim` now supports parallel computing across various
+operating systems, including Windows, thereby providing greater
+flexibility and performance improvements for users.
 
 ## Contributing
 
