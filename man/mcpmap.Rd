@@ -2,34 +2,35 @@
 % Please edit documentation in R/mcpmap.R
 \name{mcpmap}
 \alias{mcpmap}
-\title{Parallel Map Over Lists Using Multiple Cores}
+\title{Parallel Map Function using pbapply::pbmapply}
 \usage{
-mcpmap(lists, func, num_cores = parallel::detectCores() - 1)
+mcpmap(
+  lists,
+  func,
+  num_cores = parallel::detectCores() - 1,
+  show_progress = TRUE
+)
 }
 \arguments{
-\item{lists}{A list of lists where each inner list contains the arguments to be passed to the function `func`.
-Each inner list should correspond to an argument of `func`, and all lists must have the same length.}
+\item{lists}{A list of lists containing the parameters for the function.}
 
-\item{func}{The function to apply to each set of arguments contained in `lists`.}
+\item{func}{The function to be applied.}
 
-\item{num_cores}{The number of cores to use for parallel execution, defaulting to the number of cores
-available on the system minus one. On Windows, due to lack of support for multicore execution using
-forking, the default is set to 1.}
+\item{num_cores}{The number of cores to use for parallel execution. Default is one less than the total number of available cores.}
+
+\item{show_progress}{Logical indicating whether to display the progress bar. Default is TRUE.}
 }
 \value{
-A list of results, each element being the result from applying `func` to the corresponding elements
-of the input lists.
+A list of results from applying the function over the parameters.
 }
 \description{
-This function applies a given function in parallel over elements of a list.
-It uses `parallel::mcmapply` on Unix-like systems and `parallel::parLapply` on Windows.
-This approach ensures cross-platform compatibility.
+This function applies a given function over a list of parameters in parallel using multiple cores.
+}
+\details{
+The function ensures that all elements in the list have the same length and uses `pbapply::pbmapply` for parallel processing.
+It sets the number of cores based on the operating system and then applies the function in parallel.
 }
 \examples{
-sum_func <- function(x, y) x + y
-args_list <- list(c(1, 2, 3), c(4, 5, 6))
-results <- mcpmap(args_list, sum_func, num_cores = 2)
-}
-\seealso{
-\code{\link[parallel]{mcmapply}}, \code{\link[parallel]{parLapply}}
+params <- list(a = 1:3, b = 4:6)
+mcpmap(params, function(a, b) a + b, num_cores = 2)
 }

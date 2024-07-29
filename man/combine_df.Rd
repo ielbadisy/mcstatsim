@@ -2,33 +2,27 @@
 % Please edit documentation in R/helpers.R
 \name{combine_df}
 \alias{combine_df}
-\title{Combine nested lists of dataframes into a single dataframe}
+\title{Combine Dataframes in a Nested List}
 \usage{
 combine_df(nested_list)
 }
 \arguments{
-\item{nested_list}{A non-empty list of lists, where each inner list contains one or more
-data frames. It is expected that all data frames within the same sublist can be row-bound.}
+\item{nested_list}{A list of lists, where each sublist contains dataframes to be combined.}
 }
 \value{
-A single data frame that is the row-wise combination of all input data frames,
-with an additional column `ID` indicating the originating sublist.
+A combined dataframe where each original dataframe is augmented with an ID column indicating its source list.
 }
 \description{
-This function takes a nested list of data frames (a list of lists, where each inner list
-contains data frames) and combines them into a single data frame. Each data frame within
-the same sublist is combined row-wise, and an ID column is added to identify the source sublist.
-The function ensures that all elements of the input are proper lists containing data frames,
-and it stops with an error message if the input does not meet these criteria.
+This function combines dataframes that are nested within a list of lists into a single dataframe.
+}
+\details{
+The function first checks if the input is a non-empty list of lists containing dataframes.
+It then iterates through each sublist, combining the dataframes and adding an ID column to indicate their source.
+Finally, all combined dataframes are row-bound into a single dataframe.
 }
 \examples{
-df1 <- data.frame(a = 1:3, b = letters[1:3])
-df2 <- data.frame(a = 4:6, b = letters[4:6])
-df3 <- data.frame(a = 7:9, b = letters[7:9])
-df4 <- data.frame(a = 10:12, b = letters[10:12])
-
-nested_list <- list(list(df1, df2), list(df3, df4))
-combined_df <- combine_df(nested_list)
-print(combined_df)
-
+df1 <- data.frame(a = 1:3, b = 4:6)
+df2 <- data.frame(a = 7:9, b = 10:12)
+nested_list <- list(list(df1, df2), list(df1, df2))
+combine_df(nested_list)
 }
