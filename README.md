@@ -81,19 +81,25 @@ estimates. For this aim, we well set up the following simulation design:
 - **Bias**: Bias measures the average deviation of the estimated
   coefficients from the true coefficients.
 
-$$\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})$$
+$$
+\text{Bias} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})
+$$
 
 - **Coverage**: Coverage is the proportion of times the true coefficient
   value falls within the estimated confidence interval across all
   simulations.
 
-$$\text{Coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\beta_{\text{true}} \in \text{CI}_i)$$
+$$
+\text{Coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\beta_{\text{true}} \in \text{CI}_i)
+$$
 
 - **Mean Squared Error (MSE)**: MSE combines both the variance of the
   estimator and its bias, providing a single measure of estimation
   quality.
 
-$$\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})^2$$
+$$
+\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (\hat{\beta}_i - \beta_{\text{true}})^2
+$$
 
 *NB*: All these metrics (and more) are already implemented in the
 `mcstatsim` package (see `?calc_bias()`, `?calc_coverage()`, and
