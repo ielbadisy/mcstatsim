@@ -20,12 +20,17 @@ manipulation.
 
 ## Installation
 
-You can install the latest development version of `mcstatsim` from
-gitHub:
+You can install the released version of `mcstatsim` from CRAN with:
 
-``` r
+```r
+install.packages("mcstatsim")
+```
+
+Or you can install the latest development version of `mcstatsim` from GitHub:
+
+```r
 # install.packages("devtools")
-#devtools::install_github("ielbadisy/mcstatsim")
+devtools::install_github("ielbadisy/mcstatsim")
 ```
 
 ## Usage
