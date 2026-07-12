@@ -290,17 +290,16 @@ current base-`parallel` backend and two common R-level alternatives on a
 heavy synthetic workload with 64 grid rows, 60 replications, and 4
 worker processes.
 
-| backend | median (s) | itr/sec | mem_alloc |
-| --- | ---: | ---: | ---: |
-| base parallel backend | 1.21 | 0.86 | 6.13 MB |
-| pbapply | 0.79 | 1.27 | 565.12 KB |
-| future.apply | 1.16 | 0.86 | 3.50 MB |
+| backend | median (s) | itr/sec |
+| --- | ---: | ---: |
+| base parallel backend | 0.81 | 1.15 |
+| pbapply | 0.92 | 1.08 |
+| future.apply | 1.25 | 0.77 |
 
-The benchmark shows that the base backend stays in the same range as
-`future.apply`, while `pbapply` is faster on this synthetic workload.
-The advantage of the package implementation is that it keeps the API in
-base R, supports arbitrary user-supplied simulation functions, and keeps
-the progress bar under our control.
+The benchmark shows that the base backend is faster on this synthetic
+workload. The advantage of the package implementation is that it keeps
+the API in base R, supports arbitrary user-supplied simulation
+functions, and keeps the progress bar under our control.
 
 ## Summary of Changes in Version 0.5.1
 
