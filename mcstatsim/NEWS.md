@@ -6,4 +6,6 @@
 
 * Updated the documentation to describe the process-based backend and its fit for heavy Monte Carlo workloads.
 
+* Added a benchmark section comparing the backend against `pbapply` and `future.apply` on a heavy synthetic workload using `bench::mark()`.
+
 * Updated package metadata for the next release.
