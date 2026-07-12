@@ -53,21 +53,38 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     cat("Date:", format(Sys.time(), "%Y-%m-%d"), "\n")
   }
 
-  start_time <- Sys.time()
   if (nrow(grid_params) == 0L) {
     stop("'grid_params' must contain at least one row.")
   }
 
-  replicated_grid <- do.call(rbind, replicate(n, grid_params, simplify = FALSE))
-  raw_results <- mcpmap(lists = replicated_grid, func = sim_func, num_cores = num_cores, show_progress = show_progress)
+  start_time <- Sys.time()
+
+  repeated_grid <- data.table::rbindlist(rep(list(grid_params), n), use.names = TRUE, fill = TRUE)
+  rep_id <- rep(seq_len(n), each = nrow(grid_params))
+  task_args <- lapply(data.table::transpose(repeated_grid), as.list)
+  tasks <- Map(function(args, id) {
+    args$.mcstatsim_id <- id
+    args
+  }, task_args, rep_id)
+
+  task_runner <- function(task) {
+    id <- task$.mcstatsim_id
+    task$.mcstatsim_id <- NULL
+    out <- do.call(sim_func, task)
+    if (!is.data.frame(out)) {
+      out <- as.data.frame(out)
+    }
+    out$ID <- id
+    out
+  }
+
+  raw_results <- parallel_task_map(tasks, task_runner, num_cores = num_cores, show_progress = show_progress)
 
   if (is.null(raw_results)) {
     stop("Failed to obtain simulation results.")
   }
 
-  rep_id <- rep(seq_len(n), each = nrow(grid_params))
-  grouped_results <- split(raw_results, rep_id)
-  combined_results <- combine_df(grouped_results)
+  combined_results <- data.table::rbindlist(raw_results, use.names = TRUE, fill = TRUE)
 
   if (show_progress) {
     total_elapsed_time <- as.numeric(Sys.time() - start_time, units = "secs")

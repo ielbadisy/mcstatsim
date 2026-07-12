@@ -22,11 +22,10 @@ combine_df <- function(nested_list) {
     if (!is.list(nested_list[[i]]) || !all(sapply(nested_list[[i]], is.data.frame))) {
       stop("Each item in the nested list must be a list of dataframes.")
     }
-    df <- do.call(rbind, nested_list[[i]])
+    df <- data.table::rbindlist(nested_list[[i]], use.names = TRUE, fill = TRUE)
     df$ID <- i
     df
   })
 
-  combined_df <- do.call(rbind, combined_dfs)
-  return(combined_df)
+  data.table::rbindlist(combined_dfs, use.names = TRUE, fill = TRUE)
 }
