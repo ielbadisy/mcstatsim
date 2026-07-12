@@ -1,102 +1,110 @@
 ---
-# Example from https://joss.readthedocs.io/en/latest/submitting.html
-title: 'Gala: A Python package for galactic dynamics'
+title: 'mcstatsim: Functional Monte Carlo simulation in R with process-based parallelism'
 tags:
-  - Python
-  - astronomy
-  - dynamics
-  - galactic dynamics
-  - milky way
+  - R
+  - monte carlo
+  - simulation
+  - parallel computing
+  - statistics
 authors:
-  - name: Adrian M. Price-Whelan
-    orcid: 0000-0003-0872-7098
-    affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Author 2
-    orcid: 0000-0000-0000-0000
-    affiliation: 2
+  - name: Imad EL BADISY
+    affiliation: "1"
+    email: elbadisyimad@gmail.com
 affiliations:
- - name: Lyman Spitzer, Jr. Fellow, Princeton University
-   index: 1
- - name: Institution 2
-   index: 2
-citation_author: Price-Whelan et. al.
-date: 13 August 2017
-year: 2017
+  - name: Independent researcher
+    index: 1
+citation_author: EL BADISY
+date: 12 July 2026
+year: 2026
 bibliography: paper.bib
 output: rticles::joss_article
-csl: apa.csl
 journal: JOSS
 ---
 
+
+
 # Summary
 
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
+`mcstatsim` is an R package for Monte Carlo simulation studies that keeps the
+user-facing interface compact while supporting arbitrary user-supplied
+simulation functions. The core workflow takes a parameter grid, expands it
+across replications, and evaluates each task in parallel before binding the
+results into a tabular output that is straightforward to analyze downstream.
 
-``Gala`` is an Astropy-affiliated Python package for galactic dynamics. Python
-enables wrapping low-level languages (e.g., C) for speed without losing
-flexibility or ease-of-use in the user-interface. The API for ``Gala`` was
-designed to provide a class-based and user-friendly interface to fast (C or
-Cython-optimized) implementations of common operations such as gravitational
-potential and force evaluation, orbit integration, dynamical transformations,
-and chaos indicators for nonlinear dynamics. ``Gala`` also relies heavily on and
-interfaces well with the implementations of physical units and astronomical
-coordinate systems in the ``Astropy`` package [@astropy] (``astropy.units`` and
-``astropy.coordinates``).
+The package is designed for heavy simulation workloads where process-based
+parallelism has enough work to amortize cluster overhead. That design choice is
+important because many simulation studies need to call ordinary R code rather
+than compiled code, so the backend must remain compatible with arbitrary
+functions supplied by the user.
 
-``Gala`` was designed to be used by both astronomical researchers and by
-students in courses on gravitational dynamics or astronomy. It has already been
-used in a number of scientific publications [@Pearson:2017] and has also been
-used in graduate courses on Galactic dynamics to, e.g., provide interactive
-visualizations of textbook material [@Binney:2008]. The combination of speed,
-design, and support for Astropy functionality in ``Gala`` will enable exciting
-scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.
+# Statement of need
 
-# Mathematics
+Simulation studies in statistics often involve repeated execution of an R
+function over a parameter grid, followed by computation of estimators, bias,
+coverage, or error metrics. In practice, the main engineering burden is not the
+statistical calculation itself, but the orchestration of many tasks, the
+collection of outputs, and the safe use of parallel workers.
 
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
+`mcstatsim` addresses that problem by providing a functional interface centered
+on `runsim()` and `mcpmap()`. The package accepts arbitrary R simulation
+functions, preserves a visible progress bar during execution, and returns
+data-frame outputs that are easy to summarize with standard R tools.
 
-Double dollars make self-standing equations:
+# Implementation
 
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
+The current backend uses base `parallel` with a task-oriented execution model.
+Tasks are prepared once, dispatched in chunks, and combined with
+`data.table::rbindlist()` [@data.table] to reduce binding overhead. On
+Unix-like systems, the package uses a forked fast path when progress reporting
+is disabled; otherwise it falls back to a PSOCK cluster so the same code works
+across platforms.
 
+This architecture keeps the implementation in R, which is the right trade-off
+for a package whose primary objective is to safely parallelize arbitrary
+user-supplied simulation functions. It also keeps the progress bar on the
+master process, so progress reporting remains usable while workers are busy.
 
-# Citations
+# Benchmark results
 
-Citations to entries in paper.bib should be in
-[rMarkdown](https://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
+We compared `mcstatsim` against two commonly used alternatives for parallel
+apply-style workflows: `pbapply` [@pbapply] and `future.apply` [@future]. The
+benchmark used a heavy synthetic Monte Carlo workload with 60 replications over
+a 16-cell parameter grid, evaluated on four workers. Timing was measured with
+`bench::mark()` [@bench] using memory profiling disabled for the parallel cases.
 
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Rendered R Figures
-
-Figures can be plotted like so:
+The benchmark results are shown in Table 1 and Figure 1. On this workload,
+`mcstatsim` had the shortest median runtime.
 
 
-```r
-plot(1:10)
-```
 
-![](mcstatsim-JOSS_files/figure-latex/unnamed-chunk-1-1.pdf)<!-- --> 
+
+Table: Benchmark comparison on the heavy synthetic workload used during development.
+
+|Backend      | Median runtime (s)|Runtime vs. `mcstatsim` |Gain vs. `mcstatsim` |
+|:------------|------------------:|:-----------------------|:--------------------|
+|mcstatsim    |              0.810|1.00x                   |0%                   |
+|pbapply      |              0.922|1.14x                   |12.1%                |
+|future.apply |              1.250|1.54x                   |35.2%                |
+
+![Median benchmark runtime for the compared backends on the synthetic Monte Carlo workload.](mcstatsim-JOSS_files/figure-latex/benchmark-plot-1.pdf) 
+
+On this benchmark, `mcstatsim` reduced median runtime by 12.1% relative to
+`pbapply` and by 35.2% relative to `future.apply`. These results are workload
+dependent, but they show that a task-oriented backend with chunked process-based
+parallelism can provide a measurable advantage for heavy Monte Carlo studies.
+
+# Limitations
+
+`mcstatsim` is not intended to accelerate very small jobs. As with other
+process-based parallel approaches in R, cluster startup and serialization costs
+can dominate when each simulation task is too small. The package is therefore
+best suited to simulation studies with enough computation per task to justify
+parallel dispatch.
 
 # Acknowledgements
 
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+This work uses R [@R] and several community-developed packages. The benchmark
+comparison was informed by `pbapply` [@pbapply], `future.apply` [@future],
+`data.table` [@data.table], and `bench` [@bench].
 
 # References
