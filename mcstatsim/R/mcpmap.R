@@ -16,21 +16,12 @@
 #' params <- list(a = 1:3, b = 4:6)
 #' mcpmap(params, function(a, b) a + b, num_cores = 2, show_progress = FALSE)
 #' @export
-mcpmap <- function(lists, func, num_cores = parallel::detectCores() - 1L, show_progress = TRUE) {
-  if (!is.list(lists)) {
-    stop("'lists' must be a list or data frame.")
+parallel_task_map <- function(tasks, func, num_cores = parallel::detectCores() - 1L, show_progress = TRUE) {
+  if (!is.list(tasks)) {
+    stop("'tasks' must be a list.")
   }
 
-  lengths <- lengths(lists)
-  if (length(lengths) == 0L) {
-    return(list())
-  }
-
-  if (length(unique(lengths)) != 1L) {
-    stop("All elements of 'lists' must have the same length.")
-  }
-
-  n_tasks <- lengths[[1]]
+  n_tasks <- length(tasks)
   if (n_tasks == 0L) {
     return(list())
   }
@@ -41,18 +32,26 @@ mcpmap <- function(lists, func, num_cores = parallel::detectCores() - 1L, show_p
   }
   cores <- min(cores, n_tasks)
 
-  task_fun <- function(i) {
-    args <- lapply(lists, function(x) x[[i]])
-    do.call(func, args)
-  }
-
   if (show_progress) {
     cat(sprintf("Dispatching %d task(s) across %d core(s)\n", n_tasks, cores))
   }
 
   if (cores == 1L) {
-    result <- lapply(seq_len(n_tasks), task_fun, lists = lists, func = func)
+    pb <- if (show_progress) utils::txtProgressBar(min = 0, max = n_tasks, style = 3) else NULL
+    if (show_progress) on.exit(close(pb), add = TRUE)
+
+    result <- vector("list", n_tasks)
+    for (i in seq_len(n_tasks)) {
+      result[[i]] <- func(tasks[[i]])
+      if (show_progress) {
+        utils::setTxtProgressBar(pb, i)
+      }
+    }
+  } else if (!show_progress && .Platform$OS.type != "windows") {
+    result <- parallel::mclapply(tasks, func, mc.cores = cores, mc.preschedule = TRUE)
   } else {
+    chunk_size <- max(1L, ceiling(n_tasks / (cores * 4L)))
+    chunk_ids <- split(seq_len(n_tasks), ceiling(seq_len(n_tasks) / chunk_size))
     cl <- parallel::makeCluster(cores, type = "PSOCK")
     on.exit(parallel::stopCluster(cl), add = TRUE)
 
@@ -66,13 +65,55 @@ mcpmap <- function(lists, func, num_cores = parallel::detectCores() - 1L, show_p
       }, attached_pkgs)
     }
 
-    parallel::clusterExport(cl, c("lists", "func", "task_fun"), envir = environment())
-    result <- parallel::parLapply(cl, seq_len(n_tasks), task_fun)
+    parallel::clusterExport(cl, c("tasks", "func"), envir = environment())
+    result <- vector("list", n_tasks)
+    pb <- if (show_progress) utils::txtProgressBar(min = 0, max = n_tasks, style = 3) else NULL
+    if (show_progress) on.exit(close(pb), add = TRUE)
+
+    done <- 0L
+    for (chunk in chunk_ids) {
+      chunk_res <- parallel::parLapply(cl, chunk, function(i) func(tasks[[i]]))
+      result[chunk] <- chunk_res
+      done <- done + length(chunk)
+      if (show_progress) {
+        utils::setTxtProgressBar(pb, done)
+      }
+    }
   }
 
   if (show_progress) {
-    cat("Completed", n_tasks, "task(s)\n")
+    cat("\nCompleted", n_tasks, "task(s)\n")
   }
 
   result
+}
+
+mcpmap <- function(lists, func, num_cores = parallel::detectCores() - 1L, show_progress = TRUE) {
+  if (is.data.frame(lists)) {
+    lists <- lapply(data.table::transpose(lists), as.list)
+  }
+
+  if (!is.list(lists)) {
+    stop("'lists' must be a list or data frame.")
+  }
+
+  if (length(lists) == 0L) {
+    return(list())
+  }
+
+  if (is.data.frame(lists[[1]]) || is.list(lists[[1]])) {
+    tasks <- lists
+  } else {
+    lengths <- lengths(lists)
+    if (length(unique(lengths)) != 1L) {
+      stop("All elements of 'lists' must have the same length.")
+    }
+    tasks <- lapply(data.table::transpose(lists), as.list)
+  }
+
+  task_runner <- function(task) {
+    do.call(func, task)
+  }
+
+  parallel_task_map(tasks, task_runner, num_cores = num_cores, show_progress = show_progress)
 }
