@@ -1,0 +1,23 @@
+calc_bias               Calculate Bias and Bias Monte Carlo Standard
+                        Error
+calc_coverage           Calculate Coverage Probability and its Monte
+                        Carlo Standard Error
+calc_mse                Calculate Mean Squared Error and its Monte
+                        Carlo Standard Error
+calc_rejection_rate     Calculate Rejection Rate and its Monte Carlo
+                        Standard Error
+calc_relative_bias      Calculate Relative Bias and its Monte Carlo
+                        Standard Error
+calc_relative_mse       Calculate Relative Mean Squared Error and its
+                        Monte Carlo Standard Error
+calc_relative_rmse      Calculate Relative Root Mean Squared Error and
+                        its Monte Carlo Standard Error
+calc_rmse               Calculate Root Mean Squared Error and its Monte
+                        Carlo Standard Error
+calc_variance           Calculate Variance and its Monte Carlo Standard
+                        Error
+calc_width              Calculate Average Width of Confidence Intervals
+                        and its Monte Carlo Standard Error
+combine_df              Combine Dataframes in a Nested List
+mcpmap                  Parallel Map Function using functionals::fmapn
+runsim                  Run Monte Carlo Simulations in Parallel
