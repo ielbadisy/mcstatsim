@@ -8,8 +8,8 @@ Authors@R: c(person("Imad", "EL BADISY",
 Description:
     A lightweight package designed to facilitate statistical
     simulations through functional programming. It centralizes the simulation process into a single
-    higher-order function, enhancing manageability and usability by building on the 'functionals'
-    parallel-iteration engine. The package includes ready-to-use functions for common simulation targets. A detailed example can be found on <https://github.com/ielbadisy/mcstatsim>.
+    higher-order function, enhancing manageability and usability. The package includes ready-to-use
+    functions for common simulation targets.
 License: AGPL (>= 3)
 Encoding: UTF-8
 LazyData: true
