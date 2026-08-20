@@ -1,7 +1,7 @@
 Package: mcstatsim
 Type: Package
 Title: Monte Carlo Statistical Simulation Tools Using a Functional Approach
-Version: 0.5.0
+Version: 0.5.1
 Authors@R: c(person("Imad", "EL BADISY", 
       role = c("aut", "cre","cph"),
     email = "elbadisyimad@gmail.com"))
