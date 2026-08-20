@@ -2,7 +2,7 @@
 % Please edit documentation in R/mcpmap.R
 \name{mcpmap}
 \alias{mcpmap}
-\title{Parallel Map Function using pbapply::pbmapply}
+\title{Parallel Map Function using functionals::fmapn}
 \usage{
 mcpmap(
   lists,
@@ -27,7 +27,7 @@ A list of results from applying the function over the parameters.
 This function applies a given function over a list of parameters in parallel using multiple cores.
 }
 \details{
-The function ensures that all elements in the list have the same length and uses `pbapply::pbmapply` for parallel processing.
+The function ensures that all elements in the list have the same length and uses `functionals::fmapn` for parallel processing.
 It sets the number of cores based on the operating system and then applies the function in parallel.
 }
 \examples{

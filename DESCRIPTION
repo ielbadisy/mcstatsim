@@ -5,17 +5,17 @@ Version: 0.5.0
 Authors@R: c(person("Imad", "EL BADISY", 
       role = c("aut", "cre","cph"),
     email = "elbadisyimad@gmail.com"))
-Description: 
-    A lightweight package designed to facilitate statistical 
-    simulations through functional programming. It centralizes the simulation process into a single 
-    higher-order function, enhancing manageability and usability without adding overhead from external 
-    dependencies. The package includes ready-to-use functions for common simulation targets. A detailed example can be found on <https://github.com/ielbadisy/mcstatsim>.
+Description:
+    A lightweight package designed to facilitate statistical
+    simulations through functional programming. It centralizes the simulation process into a single
+    higher-order function, enhancing manageability and usability by building on the 'functionals'
+    parallel-iteration engine. The package includes ready-to-use functions for common simulation targets. A detailed example can be found on <https://github.com/ielbadisy/mcstatsim>.
 License: AGPL (>= 3)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Imports:
-    pbapply
+    functionals
 Suggests: 
     testthat (>= 3.0.0)
 URL: https://CRAN.R-project.org/package=mcstatsim
