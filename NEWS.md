@@ -1,3 +1,14 @@
+# mcstatsim 0.5.1
+
+* Switched the parallel-map backend used by `mcpmap()` from `pbapply::pbmapply`
+  to `functionals::fmapn()`, matching the equal-length-named-list mapping
+  semantics with sequential/multicore/cluster execution and an optional
+  progress bar. `runsim()` is unaffected.
+* `pbapply` is no longer a dependency; `functionals` is now the sole `Imports`.
+* Standardized `Authors@R` casing and split `URL`/`BugReports` so `URL` holds
+  only the CRAN package page and `BugReports` only the GitHub issues page.
+* Simplified the `Description:` field.
+
 # mcstatsim 0.5.0
 
 * Added a `NEWS.md` file to track changes to the package.
