@@ -5,3 +5,9 @@
 ^cran-comments\.md$
 ^README\.Rmd$
 ^\.github$
+^\.claude$
+^mcstatsim-JOSS\.Rmd$
+^mcstatsim-JOSS\.md$
+^mcstatsim-JOSS\.pdf$
+^mcstatsim-JOSS_files$
+^paper\.bib$
