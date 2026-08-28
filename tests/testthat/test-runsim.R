@@ -45,3 +45,51 @@ test_that("runsim errors when sim_func does not return a data frame", {
     "must return a data frame"
   )
 })
+
+test_that("runsim rejects a malformed seed", {
+  params <- expand.grid(a = 1:2)
+  f <- function(a) data.frame(x = rnorm(1))
+  expect_error(runsim(2, params, f, show_progress = FALSE, seed = c(1, 2)), "single number or NULL")
+  expect_error(runsim(2, params, f, show_progress = FALSE, seed = "1"), "single number or NULL")
+  expect_error(runsim(2, params, f, show_progress = FALSE, seed = NA_real_), "single number or NULL")
+})
+
+test_that("a supplied seed makes runsim reproducible and independent of core count", {
+  sim_func <- function(mu, sd) data.frame(xbar = mean(rnorm(20, mu, sd)))
+  params <- expand.grid(mu = c(0, 5), sd = c(1, 2))
+
+  a <- runsim(10, params, sim_func, show_progress = FALSE, num_cores = 1, seed = 42)
+  b <- runsim(10, params, sim_func, show_progress = FALSE, num_cores = 1, seed = 42)
+  expect_identical(a$xbar, b$xbar)
+  expect_equal(attr(a, "seed"), 42)
+
+  c <- runsim(10, params, sim_func, show_progress = FALSE, num_cores = 2, seed = 42)
+  expect_equal(a$xbar, c$xbar)
+
+  d <- runsim(10, params, sim_func, show_progress = FALSE, num_cores = 1, seed = 7)
+  expect_false(isTRUE(all.equal(a$xbar, d$xbar)))
+})
+
+test_that("runsim with a seed does not disturb the caller's RNG state", {
+  sim_func <- function(a) data.frame(x = rnorm(1))
+  params <- expand.grid(a = 1:3)
+
+  set.seed(123)
+  before <- .Random.seed
+  ref <- runif(5)
+
+  set.seed(123)
+  invisible(runsim(4, params, sim_func, show_progress = FALSE, num_cores = 1, seed = 99))
+  after <- .Random.seed
+  expect_identical(after, before)
+  expect_identical(runif(5), ref)
+})
+
+test_that("runsim without a seed leaves results random and carries no seed attribute", {
+  sim_func <- function(a) data.frame(x = rnorm(1))
+  params <- expand.grid(a = 1:3)
+  a <- runsim(20, params, sim_func, show_progress = FALSE, num_cores = 1)
+  b <- runsim(20, params, sim_func, show_progress = FALSE, num_cores = 1)
+  expect_null(attr(a, "seed"))
+  expect_false(isTRUE(all.equal(a$x, b$x)))
+})
