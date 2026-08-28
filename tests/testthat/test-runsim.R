@@ -28,6 +28,25 @@ test_that("runsim returns one row per condition per replication with an ID colum
   expect_equal(block1$result, params$a + params$b)
 })
 
+test_that("runsim prepends grid columns the sim_func did not return", {
+  sim_func <- function(a, b) data.frame(result = a + b)
+  params <- expand.grid(a = 1:3, b = 4:5)
+  res <- runsim(2, params, sim_func, show_progress = FALSE, num_cores = 1)
+  expect_equal(names(res), c("a", "b", "result", "ID"))
+  block1 <- res[res$ID == 1, ]
+  expect_equal(block1$a, params$a)
+  expect_equal(block1$b, params$b)
+  expect_equal(block1$result, params$a + params$b)
+})
+
+test_that("runsim does not duplicate a grid column the sim_func already returns", {
+  sim_func <- function(a) data.frame(a = a, result = a^2)
+  params <- expand.grid(a = 1:3)
+  res <- runsim(2, params, sim_func, show_progress = FALSE, num_cores = 1)
+  expect_equal(names(res), c("a", "result", "ID"))
+  expect_equal(sum(names(res) == "a"), 1)
+})
+
 test_that("runsim handles multi-row sim_func output", {
   sim_func <- function(a) data.frame(rep_row = 1:2, val = a * (1:2))
   params <- expand.grid(a = c(10, 20))

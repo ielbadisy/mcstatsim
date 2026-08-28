@@ -50,7 +50,12 @@ checkpoint writes when `save_path` is set. Larger values mean less I/O but more
 lost work if the run is interrupted. Ignored when `save_path` is `NULL`.}
 }
 \value{
-A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs are described in `attr(x, "errors")` (see [failure_summary()]).
+A combined dataframe of all simulation results. Every `grid_params` column that
+  `sim_func` did not itself return is prepended, so each row identifies its own
+  condition, and an `ID` column gives the replication index (1 to `n`). When `seed` is
+  supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are
+  collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs
+  are described in `attr(x, "errors")` (see [failure_summary()]).
 }
 \description{
 This function executes a series of Monte Carlo simulations in parallel, providing detailed progress updates.
@@ -59,8 +64,9 @@ This function executes a series of Monte Carlo simulations in parallel, providin
 The function first validates the input parameters. It then builds a single flat list of
 `n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
 conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
-[mcpmap()]. Results are row-bound into a single dataframe and tagged with the replication index in
-the `ID` column, preserving the layout produced by earlier versions of the package.
+[mcpmap()]. Results are row-bound into a single dataframe, the condition's `grid_params`
+columns are prepended (unless `sim_func` already returned a column of that name), and the
+replication index is tagged in the `ID` column.
 
 If `seed` is supplied, `n * nrow(grid_params)` independent RNG streams are generated up front with
 [parallel::nextRNGStream()] and handed to the jobs by position. Because job positions are fixed
