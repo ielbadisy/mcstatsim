@@ -16,6 +16,15 @@
 #'   `"warn"` drops the failed jobs, keeps the rest, and emits a warning. `"omit"` drops
 #'   the failed jobs silently. With `"warn"` or `"omit"`, details of every failed job are
 #'   stored in `attr(x, "errors")`.
+#' @param save_path Optional path to an `.rds` file used as a checkpoint. When set,
+#'   `runsim()` runs the replications in chunks and rewrites this file after each chunk,
+#'   so a run that is interrupted (crash, time limit, `Ctrl-C`) can be resumed simply by
+#'   calling `runsim()` again with the same `save_path` and matching `n` / `grid_params` /
+#'   `seed`: completed replications are loaded from disk and skipped. When `NULL`
+#'   (default) nothing is written and all jobs run in a single pass.
+#' @param checkpoint_every Positive integer: how many replications to run between
+#'   checkpoint writes when `save_path` is set. Larger values mean less I/O but more
+#'   lost work if the run is interrupted. Ignored when `save_path` is `NULL`.
 #' @return A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs are described in `attr(x, "errors")` (see [failure_summary()]).
 #' @details The function first validates the input parameters. It then builds a single flat list of
 #' `n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
@@ -31,6 +40,10 @@
 #'
 #' Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
 #' process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
+#'
+#' When `save_path` is set the replications are run in chunks of `checkpoint_every` and the
+#' checkpoint file is rewritten after each chunk. Per-job RNG streams are keyed by position, so a
+#' resumed run produces exactly the same results as an uninterrupted one.
 #' @examples
 #' \dontrun{
 #' library(mcstatsim)
@@ -52,7 +65,7 @@
 #' @importFrom utils object.size
 #' @export
 runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = parallel::detectCores() - 1, seed = NULL,
-                   on_error = c("stop", "warn", "omit")) {
+                   on_error = c("stop", "warn", "omit"), save_path = NULL, checkpoint_every = 1L) {
 
   on_error <- match.arg(on_error)
 
@@ -73,8 +86,18 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     stop("'seed' must be a single number or NULL.")
   }
 
+  if (!is.null(save_path) && (!is.character(save_path) || length(save_path) != 1 || is.na(save_path))) {
+    stop("'save_path' must be a single file path or NULL.")
+  }
+
+  if (!is.numeric(checkpoint_every) || length(checkpoint_every) != 1 ||
+      checkpoint_every <= 0 || checkpoint_every != as.integer(checkpoint_every)) {
+    stop("'checkpoint_every' must be a positive integer.")
+  }
+
   n <- as.integer(n)
   n_cond <- nrow(grid_params)
+  checkpoint_every <- as.integer(checkpoint_every)
 
   if (n_cond < 1L) {
     stop("'grid_params' must have at least one row.")
@@ -104,7 +127,7 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   })
 
   # one independent L'Ecuyer-CMRG stream per job, assigned by position
-  map_lists <- list(job = jobs)
+  streams <- NULL
   if (!is.null(seed)) {
     # snapshot and restore the caller's RNG state so runsim() has no side effect
     had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
@@ -125,7 +148,6 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
       streams[[k]] <- state
       state <- parallel::nextRNGStream(state)
     }
-    map_lists$stream <- streams
   }
 
   # each job returns an envelope so a worker-side error is carried back rather
@@ -149,15 +171,96 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     list(value = value, warnings = warns)
   }
 
-  # simulation engine: one load-balanced parallel pass over every job
-  results <- mcpmap(lists = map_lists, func = run_one, num_cores = num_cores, show_progress = show_progress)
-
-  if (is.null(results) || length(results) != n_jobs) {
-    stop("Failed to obtain simulation results for every job.")
+  dispatch <- function(job_idx) {
+    map_lists <- list(job = jobs[job_idx])
+    if (!is.null(streams)) map_lists$stream <- streams[job_idx]
+    out <- mcpmap(lists = map_lists, func = run_one, num_cores = num_cores, show_progress = show_progress)
+    if (is.null(out) || length(out) != length(job_idx)) {
+      stop("Failed to obtain simulation results for every job.")
+    }
+    out
   }
 
-  values <- lapply(results, `[[`, "value")
-  warns  <- lapply(results, `[[`, "warnings")
+  # per-job envelopes for the whole run, filled in as chunks complete
+  values <- vector("list", n_jobs)
+  warns <- rep(list(character()), n_jobs)
+
+  if (is.null(save_path)) {
+    res <- dispatch(seq_len(n_jobs))
+    values <- lapply(res, `[[`, "value")
+    warns <- lapply(res, `[[`, "warnings")
+  } else {
+    ck <- .runsim_checkpoint_load(save_path, n = n, n_cond = n_cond, seed = seed,
+                                  grid_params = grid_params, sim_func = sim_func)
+    done_reps <- integer(0)
+    if (!is.null(ck)) {
+      values[ck$done_jobs] <- ck$values[ck$done_jobs]
+      warns[ck$done_jobs] <- ck$warns[ck$done_jobs]
+      done_reps <- ck$done_reps
+      if (show_progress && length(done_reps)) {
+        cat(sprintf("Resuming from %s: %d of %d replication(s) already done.\n",
+                    save_path, length(done_reps), n))
+      }
+    }
+
+    todo_reps <- setdiff(seq_len(n), done_reps)
+    chunks <- split(todo_reps, ceiling(seq_along(todo_reps) / checkpoint_every))
+
+    for (chunk in chunks) {
+      job_idx <- which(rep_index %in% chunk)
+      res <- dispatch(job_idx)
+      chunk_values <- lapply(res, `[[`, "value")
+      chunk_warns <- lapply(res, `[[`, "warnings")
+
+      if (on_error == "stop") {
+        chunk_failed <- vapply(chunk_values, inherits, logical(1), what = "runsim_failed_job")
+        if (any(chunk_failed)) {
+          # keep only the chunks that fully succeeded; this one is retried on resume
+          .runsim_checkpoint_save(save_path, n = n, n_cond = n_cond, seed = seed,
+                                  grid_params = grid_params, sim_func = sim_func,
+                                  values = values, warns = warns, done_reps = done_reps)
+          stop(sprintf("'sim_func' errored (on_error = \"stop\"). First error: %s\nProgress saved to %s.",
+                       chunk_values[chunk_failed][[1]]$message, save_path))
+        }
+      }
+
+      values[job_idx] <- chunk_values
+      warns[job_idx] <- chunk_warns
+      done_reps <- sort(c(done_reps, chunk))
+      .runsim_checkpoint_save(save_path, n = n, n_cond = n_cond, seed = seed,
+                              grid_params = grid_params, sim_func = sim_func,
+                              values = values, warns = warns, done_reps = done_reps)
+      if (show_progress) {
+        cat(sprintf("Checkpoint saved: %d/%d replication(s) complete.\n", length(done_reps), n))
+      }
+    }
+  }
+
+  combined_results <- .runsim_assemble(values = values, warns = warns,
+                                       cond_index = cond_index, rep_index = rep_index,
+                                       grid_params = grid_params, n_jobs = n_jobs,
+                                       on_error = on_error, seed = seed)
+
+  if (show_progress) {
+    total_elapsed_time <- as.numeric(Sys.time() - start_time, units = "secs")
+    n_failed <- nrow(attr(combined_results, "errors"))
+    if (!is.null(n_failed) && n_failed > 0) {
+      cat(sprintf("Dropped %d failed job(s); see attr(, \"errors\").\n", n_failed))
+    }
+    cat("All simulations complete at", format(Sys.time(), "%X"), "\n")
+    cat("Date:", format(Sys.time(), "%Y-%m-%d"), "\n")
+    cat(sprintf("Total elapsed time: %02d:%02d:%02d\n",
+                floor(total_elapsed_time / 3600), floor((total_elapsed_time %% 3600) / 60), floor(total_elapsed_time %% 60)))
+    cat(sprintf("Final memory usage: %.2f MB\n", object.size(combined_results) / (1024^2)))
+  }
+
+  return(combined_results)
+}
+
+
+# Turn per-job envelopes into the combined result data frame, applying the
+# on_error policy and attaching the "errors"/"warnings"/"seed" attributes.
+.runsim_assemble <- function(values, warns, cond_index, rep_index, grid_params, n_jobs, on_error, seed) {
   failed <- vapply(values, inherits, logical(1), what = "runsim_failed_job")
 
   if (any(failed)) {
@@ -213,17 +316,62 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   if (!is.null(errors_df)) attr(combined_results, "errors") <- errors_df
   if (!is.null(seed)) attr(combined_results, "seed") <- seed
 
-  if (show_progress) {
-    total_elapsed_time <- as.numeric(Sys.time() - start_time, units = "secs")
-    if (any(failed)) {
-      cat(sprintf("Dropped %d failed job(s); see attr(, \"errors\").\n", sum(failed)))
-    }
-    cat("All simulations complete at", format(Sys.time(), "%X"), "\n")
-    cat("Date:", format(Sys.time(), "%Y-%m-%d"), "\n")
-    cat(sprintf("Total elapsed time: %02d:%02d:%02d\n",
-                floor(total_elapsed_time / 3600), floor((total_elapsed_time %% 3600) / 60), floor(total_elapsed_time %% 60)))
-    cat(sprintf("Final memory usage: %.2f MB\n", object.size(combined_results) / (1024^2)))
+  combined_results
+}
+
+
+# Signature the checkpoint must match before a resume is allowed.
+.runsim_run_key <- function(n, n_cond, seed, grid_params, sim_func) {
+  list(
+    n = n,
+    n_cond = n_cond,
+    seed = seed,
+    grid = grid_params,
+    sim_formals = names(formals(sim_func))
+  )
+}
+
+.runsim_checkpoint_save <- function(path, n, n_cond, seed, grid_params, sim_func, values, warns, done_reps) {
+  obj <- list(
+    mcstatsim_checkpoint = 1L,
+    key = .runsim_run_key(n, n_cond, seed, grid_params, sim_func),
+    values = values,
+    warns = warns,
+    done_reps = done_reps
+  )
+  tmp <- paste0(path, ".tmp")
+  saveRDS(obj, tmp)
+  if (!file.rename(tmp, path)) {
+    file.copy(tmp, path, overwrite = TRUE)
+    unlink(tmp)
+  }
+  invisible(path)
+}
+
+.runsim_checkpoint_load <- function(path, n, n_cond, seed, grid_params, sim_func) {
+  if (!file.exists(path)) return(NULL)
+  obj <- readRDS(path)
+  if (!is.list(obj) || !identical(obj$mcstatsim_checkpoint, 1L)) {
+    stop("'save_path' exists but is not an mcstatsim checkpoint file: ", path)
   }
 
-  return(combined_results)
+  key <- .runsim_run_key(n, n_cond, seed, grid_params, sim_func)
+  mismatched <- character()
+  if (!identical(key$n, obj$key$n)) mismatched <- c(mismatched, "n")
+  if (!identical(key$n_cond, obj$key$n_cond)) mismatched <- c(mismatched, "grid_params (row count)")
+  if (!identical(key$seed, obj$key$seed)) mismatched <- c(mismatched, "seed")
+  if (!isTRUE(all.equal(key$grid, obj$key$grid))) mismatched <- c(mismatched, "grid_params")
+  if (length(mismatched)) {
+    stop("checkpoint at ", path, " does not match this call (differs in: ",
+         paste(mismatched, collapse = ", "),
+         "). Delete the file or use a different 'save_path' to start fresh.")
+  }
+  if (!identical(key$sim_formals, obj$key$sim_formals)) {
+    warning("checkpoint at ", path, " was written with a 'sim_func' that had different ",
+            "arguments; resuming anyway, but mixed results may be inconsistent.")
+  }
+
+  done_reps <- obj$done_reps
+  done_jobs <- which(rep(seq_len(n), each = n_cond) %in% done_reps)
+  list(values = obj$values, warns = obj$warns, done_reps = done_reps, done_jobs = done_jobs)
 }
