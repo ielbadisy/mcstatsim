@@ -2,30 +2,35 @@
 # `mcstatsim`
 
 <!-- badges: start -->
+
+[![CRAN status](https://www.r-pkg.org/badges/version/mcstatsim)](https://CRAN.R-project.org/package=mcstatsim)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/mcstatsim)](https://CRAN.R-project.org/package=mcstatsim)
+[![R-CMD-check](https://github.com/ielbadisy/mcstatsim/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ielbadisy/mcstatsim/actions/workflows/R-CMD-check.yaml)
+[![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 <!-- badges: end -->
 
 ## About
 
 `mcstatsim` is a lightweight, functional-style toolkit for Monte Carlo
-simulation studies. Its core is a **higher-order driver**, `runsim()`:
-you write the simulation as a function of its parameters, and `runsim()`
-maps it over a grid of conditions, owning the iteration, parallelism,
-reproducible random-number streams, error capture and result assembly.
-Around it the package ships ready-to-use **performance measures**, an
-**evaluation layer** that turns raw replicates into a tidy results
-table, and **diagnostic plots**.
+simulation studies. Its core is a **higher-order driver**, `runsim()`: you write
+the simulation as a function of its parameters, and `runsim()` maps it over a
+grid of conditions, owning the iteration, parallelism, reproducible
+random-number streams, error capture and result assembly. Around it the package
+ships ready-to-use **performance measures**, an **evaluation layer** that turns
+raw replicates into a tidy results table, and **diagnostic plots**.
 
-The only hard dependency is `functionals`. `ggplot2` is used by the
-plotting helpers and is optional.
+The only hard dependency is `functionals`. `ggplot2` is used by the plotting
+helpers and is optional.
 
 ## How it works
 
-`runsim()` takes a grid of conditions (one row per scenario), a
-simulation function whose arguments match the grid columns, and the
-number of replications. It builds one flat list of `n * nrow(grid)`
-jobs, runs them in a single load-balanced parallel pass, and row-binds
-the results into a data frame with the grid columns, the quantities
-returned by the simulation function, and a replication index `ID`.
+`runsim()` takes a grid of conditions (one row per scenario), a simulation
+function whose arguments match the grid columns, and the number of
+replications. It builds one flat list of `n * nrow(grid)` jobs, runs them in a
+single load-balanced parallel pass, and row-binds the results into a data frame
+with the grid columns, the quantities returned by the simulation function, and a
+replication index `ID`.
 
 ## Installation
 
@@ -37,12 +42,11 @@ devtools::install_github("ielbadisy/mcstatsim")  # development version
 
 ## A complete example
 
-We evaluate the normal-theory 95% confidence interval for a mean when
-the data are drawn either from a normal distribution or from a skewed
-(centred log-normal) distribution, across three sample sizes. The true
-mean is `0` in every cell, so we expect bias near zero and coverage near
-0.95, but the `t`-interval is known to under-cover under skew at small
-`n`.
+We evaluate the normal-theory 95% confidence interval for a mean when the data
+are drawn either from a normal distribution or from a skewed (centred
+log-normal) distribution, across three sample sizes. The true mean is `0` in
+every cell, so we expect bias near zero and coverage near 0.95, but the
+`t`-interval is known to under-cover under skew at small `n`.
 
 ### 1. Simulation function and grid
 
@@ -76,8 +80,8 @@ grid
 
 ### 2. Run the simulation
 
-`seed` gives every job its own independent `L'Ecuyer-CMRG` stream, so
-the run is reproducible and does not depend on the number of cores.
+`seed` gives every job its own independent `L'Ecuyer-CMRG` stream, so the run is
+reproducible and does not depend on the number of cores.
 
 ``` r
 res <- runsim(
@@ -130,8 +134,8 @@ perf
 #> 6 0.3956937 0.000631265
 ```
 
-Each `calc_*` measure contributes its estimate and its Monte Carlo
-standard error (the `*_mcse` columns).
+Each `calc_*` measure contributes its estimate and its Monte Carlo standard
+error (the `*_mcse` columns).
 
 ### 4. Diagnostics
 
@@ -143,8 +147,7 @@ check_estimates(res, by = c("n", "dist"))
 #> <0 rows> (or 0-length row.names)
 ```
 
-How many replications would we need to pin the coverage MCSE down to
-0.0025?
+How many replications would we need to pin the coverage MCSE down to 0.0025?
 
 ``` r
 data.frame(perf[c("n", "dist")],
@@ -170,10 +173,10 @@ plot_convergence(res, "est", by = c("n", "dist"))
 
 ![](man/figures/plot-convergence-1.png)<!-- -->
 
-**Zip plot** (Morris, White and Crowther, 2019). Confidence intervals
-sorted by the extremeness of their z-statistic and coloured by whether
-they cover; a well-calibrated interval fills the panel up to the nominal
-line in the “covers” colour. Shown here for `n = 10`:
+**Zip plot** (Morris, White and Crowther, 2019). Confidence intervals sorted by
+the extremeness of their z-statistic and coloured by whether they cover; a
+well-calibrated interval fills the panel up to the nominal line in the
+“covers” colour. Shown here for `n = 10`:
 
 ``` r
 plot_zip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
@@ -181,8 +184,8 @@ plot_zip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
 
 ![](man/figures/plot-zip-1.png)<!-- -->
 
-**Performance across the design.** Coverage with a `+/- 2 MCSE` bar
-against the nominal 0.95 line:
+**Performance across the design.** Coverage with a `+/- 2 MCSE` bar against
+the nominal 0.95 line:
 
 ``` r
 plot_performance(perf, "coverage", x = "n", colour = "dist", ref = 0.95)
@@ -190,10 +193,9 @@ plot_performance(perf, "coverage", x = "n", colour = "dist", ref = 0.95)
 
 ![](man/figures/plot-performance-1.png)<!-- -->
 
-The log-normal intervals under-cover at `n = 10` (the zip plot shows the
-misses concentrated on one side, the signature of skew) and climb back
-toward 0.95 as `n` grows. The normal-data intervals sit on 0.95
-throughout.
+The log-normal intervals under-cover at `n = 10` (the zip plot shows the misses
+concentrated on one side, the signature of skew) and climb back toward 0.95 as
+`n` grows. The normal-data intervals sit on 0.95 throughout.
 
 ## Reproducibility and error handling
 
@@ -205,33 +207,27 @@ identical(a$est, b$est)
 ```
 
 If a simulation function errors on some cells, `on_error = "warn"` (or
-`"omit"`) drops those jobs and records them in `attr(x, "errors")`,
-which `failure_summary()` aggregates per condition. A `save_path` makes
-a long run resumable: it is checkpointed after each chunk of
-replications and re-running `runsim()` with the same `save_path` picks
-up where it stopped.
+`"omit"`) drops those jobs and records them in `attr(x, "errors")`, which
+`failure_summary()` aggregates per condition. A `save_path` makes a long run
+resumable: it is checkpointed after each chunk of replications and re-running
+`runsim()` with the same `save_path` picks up where it stopped.
 
 ## Performance measures
 
 `calc_bias()`, `calc_variance()`, `calc_mse()`, `calc_rmse()`,
 `calc_coverage()`, `calc_width()`, `calc_rejection_rate()`,
-`calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()`.
-Each returns the estimate together with its Monte Carlo standard error.
+`calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()`. Each
+returns the estimate together with its Monte Carlo standard error.
 
 ## Features
 
-- **Higher-order, declarative interface:** write the simulation as a
-  function; `runsim()` maps it over the design.
-- **Reproducible parallelism:** per-job RNG streams; results independent
-  of core count.
-- **Robustness:** per-cell error/warning capture, checkpoint/resume for
-  long runs.
-- **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware
-  measures.
-- **Diagnostics:** convergence traces, zip plots, performance plots,
-  non-finite checks.
+- **Higher-order, declarative interface:** write the simulation as a function; `runsim()` maps it over the design.
+- **Reproducible parallelism:** per-job RNG streams; results independent of core count.
+- **Robustness:** per-cell error/warning capture, checkpoint/resume for long runs.
+- **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware measures.
+- **Diagnostics:** convergence traces, zip plots, performance plots, non-finite checks.
 
 ## Contributing
 
-Contributions are welcome. Please feel free to open an issue or submit a
-pull request.
+Contributions are welcome. Please feel free to open an issue or submit a pull
+request.
