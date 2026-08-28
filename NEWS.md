@@ -1,3 +1,14 @@
+# mcstatsim 0.9.0
+
+* New plotting diagnostics (require the suggested `ggplot2`):
+  * `plot_convergence()` -- running mean of a quantity vs replication, with a
+    Monte Carlo standard-error band, one panel per condition.
+  * `plot_zip()` -- the zip plot of Morris, White and Crowther (2019) for
+    confidence-interval coverage.
+  * `plot_performance()` -- point-range of a `summarise_sim()` measure and its
+    MCSE across the design.
+* `ggplot2` added to `Suggests`.
+
 # mcstatsim 0.8.0
 
 * New `mcse_target()`: given the Monte Carlo standard error reached with the

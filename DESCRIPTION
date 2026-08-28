@@ -1,7 +1,7 @@
 Package: mcstatsim
 Type: Package
 Title: Monte Carlo Statistical Simulation Tools Using a Functional Approach
-Version: 0.8.0
+Version: 0.9.0
 Authors@R: c(person("Imad", "El Badisy", 
       role = c("aut", "cre","cph"),
     email = "elbadisyimad@gmail.com"))
@@ -15,8 +15,9 @@ Encoding: UTF-8
 RoxygenNote: 7.3.3
 Imports:
     functionals
-Suggests: 
-    testthat (>= 3.0.0)
+Suggests:
+    testthat (>= 3.0.0),
+    ggplot2
 URL: https://CRAN.R-project.org/package=mcstatsim
 BugReports: https://github.com/ielbadisy/mcstatsim/issues
 Config/testthat/edition: 3
