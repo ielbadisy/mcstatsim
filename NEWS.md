@@ -1,3 +1,15 @@
+# mcstatsim 0.7.0
+
+* New `summarise_sim()` collapses replicate-level `runsim()` output into one row
+  per condition, evaluating one or more performance measures (given as one-sided
+  formulas such as `~ calc_bias(est, true_val[1])` or as functions of the group
+  dataframe). Each `calc_*` measure contributes its estimate and MCSE columns;
+  colliding output names are an error.
+* `runsim()` now prepends every `grid_params` column that `sim_func` did not
+  itself return, so the result identifies its own conditions and is ready for
+  `summarise_sim()` or `aggregate()` without echoing parameters inside `sim_func`.
+  A column that `sim_func` already returns is left untouched.
+
 # mcstatsim 0.6.0
 
 * `runsim()` now dispatches all `n * nrow(grid_params)` jobs in a single
