@@ -4,8 +4,12 @@
 ^CRAN-SUBMISSION$
 ^cran-comments\.md$
 ^README\.Rmd$
+^README\.html$
 ^\.github$
 ^\.claude$
+^\.gitignore$
+^.*\.Rcheck$
+^.*\.tar\.gz$
 ^mcstatsim-JOSS\.Rmd$
 ^mcstatsim-JOSS\.md$
 ^mcstatsim-JOSS\.pdf$
