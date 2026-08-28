@@ -25,12 +25,18 @@
 #' @param checkpoint_every Positive integer: how many replications to run between
 #'   checkpoint writes when `save_path` is set. Larger values mean less I/O but more
 #'   lost work if the run is interrupted. Ignored when `save_path` is `NULL`.
-#' @return A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs are described in `attr(x, "errors")` (see [failure_summary()]).
+#' @return A combined dataframe of all simulation results. Every `grid_params` column that
+#'   `sim_func` did not itself return is prepended, so each row identifies its own
+#'   condition, and an `ID` column gives the replication index (1 to `n`). When `seed` is
+#'   supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are
+#'   collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs
+#'   are described in `attr(x, "errors")` (see [failure_summary()]).
 #' @details The function first validates the input parameters. It then builds a single flat list of
 #' `n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
 #' conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
-#' [mcpmap()]. Results are row-bound into a single dataframe and tagged with the replication index in
-#' the `ID` column, preserving the layout produced by earlier versions of the package.
+#' [mcpmap()]. Results are row-bound into a single dataframe, the condition's `grid_params`
+#' columns are prepended (unless `sim_func` already returned a column of that name), and the
+#' replication index is tagged in the `ID` column.
 #'
 #' If `seed` is supplied, `n * nrow(grid_params)` independent RNG streams are generated up front with
 #' [parallel::nextRNGStream()] and handed to the jobs by position. Because job positions are fixed
@@ -300,6 +306,18 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   row_counts <- vapply(ok_values, nrow, integer(1))
   combined_results <- do.call(rbind, ok_values)
   combined_results$ID <- rep(rep_index[keep], times = row_counts)
+
+  # prepend the condition's grid columns (those sim_func did not already return),
+  # so the result identifies its own conditions for aggregate()/summarise_sim()
+  new_cols <- setdiff(names(grid_params), names(combined_results))
+  if (length(new_cols)) {
+    kept_cond <- rep(cond_index[keep], times = row_counts)
+    combined_results <- cbind(
+      grid_params[kept_cond, new_cols, drop = FALSE],
+      combined_results,
+      stringsAsFactors = FALSE
+    )
+  }
   rownames(combined_results) <- NULL
 
   has_warn <- lengths(warns) > 0L
