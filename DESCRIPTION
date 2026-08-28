@@ -6,10 +6,13 @@ Authors@R: c(person("Imad", "El Badisy",
       role = c("aut", "cre","cph"),
     email = "elbadisyimad@gmail.com"))
 Description:
-    A lightweight package designed to facilitate statistical
-    simulations through functional programming. It centralizes the simulation process into a single
-    higher-order function, enhancing manageability and usability. The package includes ready-to-use
-    functions for common simulation targets.
+    A lightweight toolkit for Monte Carlo simulation studies built around a
+    higher-order, functional-style interface: the simulation is expressed as a
+    function of its parameters and mapped over a grid of conditions by a single
+    driver function, which handles iteration, parallelism, reproducible
+    per-replication random-number streams, error capture and result assembly.
+    Also provides ready-to-use performance measures with Monte Carlo standard
+    errors, a summary layer, and diagnostic plots.
 License: AGPL (>= 3)
 Encoding: UTF-8
 RoxygenNote: 7.3.3

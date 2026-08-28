@@ -6,11 +6,14 @@
 
 ## About
 
-`mcstatsim` is a lightweight, functional-programming approach to Monte
-Carlo statistical simulation. The whole study is driven by a **single
-higher-order function**, `runsim()`, and the package ships ready-to-use
-**performance measures**, an **evaluation layer** that turns raw
-replicates into a tidy results table, and **diagnostic plots**.
+`mcstatsim` is a lightweight, functional-style toolkit for Monte Carlo
+simulation studies. Its core is a **higher-order driver**, `runsim()`:
+you write the simulation as a function of its parameters, and `runsim()`
+maps it over a grid of conditions, owning the iteration, parallelism,
+reproducible random-number streams, error capture and result assembly.
+Around it the package ships ready-to-use **performance measures**, an
+**evaluation layer** that turns raw replicates into a tidy results
+table, and **diagnostic plots**.
 
 The only hard dependency is `functionals`. `ggplot2` is used by the
 plotting helpers and is optional.
@@ -38,7 +41,7 @@ We evaluate the normal-theory 95% confidence interval for a mean when
 the data are drawn either from a normal distribution or from a skewed
 (centred log-normal) distribution, across three sample sizes. The true
 mean is `0` in every cell, so we expect bias near zero and coverage near
-0.95 – but the `t`-interval is known to under-cover under skew at small
+0.95, but the `t`-interval is known to under-cover under skew at small
 `n`.
 
 ### 1. Simulation function and grid
@@ -158,7 +161,7 @@ data.frame(perf[c("n", "dist")],
 
 ### 5. Plots
 
-**Convergence trace** – the running mean of the point estimate with a
+**Convergence trace.** The running mean of the point estimate with a
 Monte Carlo standard-error band, one panel per condition:
 
 ``` r
@@ -167,7 +170,7 @@ plot_convergence(res, "est", by = c("n", "dist"))
 
 ![](man/figures/plot-convergence-1.png)<!-- -->
 
-**Zip plot** (Morris, White & Crowther, 2019) – confidence intervals
+**Zip plot** (Morris, White and Crowther, 2019). Confidence intervals
 sorted by the extremeness of their z-statistic and coloured by whether
 they cover; a well-calibrated interval fills the panel up to the nominal
 line in the “covers” colour. Shown here for `n = 10`:
@@ -178,7 +181,7 @@ plot_zip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
 
 ![](man/figures/plot-zip-1.png)<!-- -->
 
-**Performance across the design** – coverage with a `+/- 2 MCSE` bar
+**Performance across the design.** Coverage with a `+/- 2 MCSE` bar
 against the nominal 0.95 line:
 
 ``` r
@@ -187,9 +190,9 @@ plot_performance(perf, "coverage", x = "n", colour = "dist", ref = 0.95)
 
 ![](man/figures/plot-performance-1.png)<!-- -->
 
-The log-normal intervals under-cover at `n = 10` – the zip plot shows
-the misses concentrated on one side, the signature of skew – and climb
-back toward 0.95 as `n` grows. The normal-data intervals sit on 0.95
+The log-normal intervals under-cover at `n = 10` (the zip plot shows the
+misses concentrated on one side, the signature of skew) and climb back
+toward 0.95 as `n` grows. The normal-data intervals sit on 0.95
 throughout.
 
 ## Reproducibility and error handling
@@ -212,20 +215,20 @@ up where it stopped.
 
 `calc_bias()`, `calc_variance()`, `calc_mse()`, `calc_rmse()`,
 `calc_coverage()`, `calc_width()`, `calc_rejection_rate()`,
-`calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()` –
-each returns the estimate together with its Monte Carlo standard error.
+`calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()`.
+Each returns the estimate together with its Monte Carlo standard error.
 
 ## Features
 
-- **Functional programming approach** – one higher-order function drives
-  the study.
-- **Reproducible parallelism** – per-job RNG streams; results
-  independent of core count.
-- **Robustness** – per-cell error/warning capture, checkpoint/resume for
+- **Higher-order, declarative interface:** write the simulation as a
+  function; `runsim()` maps it over the design.
+- **Reproducible parallelism:** per-job RNG streams; results independent
+  of core count.
+- **Robustness:** per-cell error/warning capture, checkpoint/resume for
   long runs.
-- **Evaluation layer** – `summarise_sim()` plus a full set of MCSE-aware
+- **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware
   measures.
-- **Diagnostics** – convergence traces, zip plots, performance plots,
+- **Diagnostics:** convergence traces, zip plots, performance plots,
   non-finite checks.
 
 ## Contributing
