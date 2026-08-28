@@ -20,6 +20,12 @@
   backends would otherwise swallow) into `attr(x, "warnings")`.
 * New `failure_summary()` aggregates `attr(x, "errors")` into one row per
   condition with the failure count, failure rate, and an example message.
+* `runsim()` gains `save_path` and `checkpoint_every`. With `save_path` set,
+  replications run in chunks and the checkpoint file is rewritten after each
+  chunk; calling `runsim()` again with the same `save_path` and matching
+  `n` / `grid_params` / `seed` resumes, loading completed replications from
+  disk and running only the rest. Per-job RNG streams are keyed by position,
+  so a resumed run reproduces an uninterrupted one exactly.
 
 # mcstatsim 0.5.1
 

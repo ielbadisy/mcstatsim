@@ -11,7 +11,9 @@ runsim(
   show_progress = TRUE,
   num_cores = parallel::detectCores() - 1,
   seed = NULL,
-  on_error = c("stop", "warn", "omit")
+  on_error = c("stop", "warn", "omit"),
+  save_path = NULL,
+  checkpoint_every = 1L
 )
 }
 \arguments{
@@ -35,6 +37,17 @@ order in which jobs finish. When `NULL` (default) the session RNG is left untouc
 `"warn"` drops the failed jobs, keeps the rest, and emits a warning. `"omit"` drops
 the failed jobs silently. With `"warn"` or `"omit"`, details of every failed job are
 stored in `attr(x, "errors")`.}
+
+\item{save_path}{Optional path to an `.rds` file used as a checkpoint. When set,
+`runsim()` runs the replications in chunks and rewrites this file after each chunk,
+so a run that is interrupted (crash, time limit, `Ctrl-C`) can be resumed simply by
+calling `runsim()` again with the same `save_path` and matching `n` / `grid_params` /
+`seed`: completed replications are loaded from disk and skipped. When `NULL`
+(default) nothing is written and all jobs run in a single pass.}
+
+\item{checkpoint_every}{Positive integer: how many replications to run between
+checkpoint writes when `save_path` is set. Larger values mean less I/O but more
+lost work if the run is interrupted. Ignored when `save_path` is `NULL`.}
 }
 \value{
 A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs are described in `attr(x, "errors")` (see [failure_summary()]).
@@ -57,6 +70,10 @@ regardless of core count, so runs are bit-for-bit reproducible. Do not call `set
 
 Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
 process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
+
+When `save_path` is set the replications are run in chunks of `checkpoint_every` and the
+checkpoint file is rewritten after each chunk. Per-job RNG streams are keyed by position, so a
+resumed run produces exactly the same results as an uninterrupted one.
 }
 \examples{
 \dontrun{
