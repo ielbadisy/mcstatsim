@@ -1,3 +1,12 @@
+# mcstatsim 0.8.0
+
+* New `mcse_target()`: given the Monte Carlo standard error reached with the
+  current number of replications, returns how many replications are needed to
+  reach a target MCSE (using the `1 / sqrt(n_sim)` scaling). Vectorised.
+* New `check_estimates()`: scans the numeric columns of a `runsim()` result for
+  `NA` / `NaN` / `Inf` and reports the count and proportion per condition, so a
+  few blown-up replications are not silently folded into a summary table.
+
 # mcstatsim 0.7.1
 
 * `calc_relative_rmse()` now returns a correct Monte Carlo standard error. The
