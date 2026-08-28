@@ -24,14 +24,17 @@ runsim(
 \item{num_cores}{The number of cores to use for parallel execution. The default is one less than the total number of cores available on the system.}
 }
 \value{
-A combined dataframe of all simulation results.
+A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from.
 }
 \description{
 This function executes a series of Monte Carlo simulations in parallel, providing detailed progress updates.
 }
 \details{
-The function first validates the input parameters. It then uses parallel processing to apply `sim_func` to each combination of parameters specified in `grid_params`, repeating each simulation `n` times.
-The results are combined into a single dataframe.
+The function first validates the input parameters. It then builds a single flat list of
+`n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
+conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
+[mcpmap()]. Results are row-bound into a single dataframe and tagged with the replication index in
+the `ID` column, preserving the layout produced by earlier versions of the package.
 }
 \examples{
 \dontrun{
