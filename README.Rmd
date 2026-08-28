@@ -2,268 +2,196 @@
 output: github_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, error = TRUE, warning = TRUE, message = TRUE, eval = FALSE)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/",
+  fig.width = 8,
+  fig.height = 4.5,
+  dpi = 120,
+  message = FALSE,
+  warning = FALSE
+)
+set.seed(1)
 ```
 
-# `mcstatsim` package
+# `mcstatsim`
+
+<!-- badges: start -->
+<!-- badges: end -->
 
 ## About
 
-The `mcstatsim` package offers an efficient, functional programming-based approach for statistical simulations, centralizing the process in a **single higher-order function** for better manageability. Besides, it includes ready-to-use functions for well-known  **simulation targets**. 
+`mcstatsim` is a lightweight, functional-programming approach to Monte Carlo
+statistical simulation. The whole study is driven by a **single higher-order
+function**, `runsim()`, and the package ships ready-to-use **performance
+measures**, an **evaluation layer** that turns raw replicates into a tidy
+results table, and **diagnostic plots**.
 
-## How?
+The only hard dependency is `functionals`. `ggplot2` is used by the plotting
+helpers and is optional.
 
-The core `runsim()` function processes simulation  parameters via expanded grid, mapping them to the simulation function. 
+## How it works
 
-Outputs are deliberately structured as dataframe to simplify analysis and visualization, addressing the limitations of list outputs in data manipulation.
+`runsim()` takes a grid of conditions (one row per scenario), a simulation
+function whose arguments match the grid columns, and the number of
+replications. It builds one flat list of `n * nrow(grid)` jobs, runs them in a
+single load-balanced parallel pass, and row-binds the results into a data frame
+with the grid columns, the quantities returned by the simulation function, and a
+replication index `ID`.
 
 ## Installation
 
-You can install the latest development version of `mcstatsim` from gitHub:
-
-```{r, eval=FALSE}
+```{r, eval = FALSE}
+install.packages("mcstatsim")            # released version
 # install.packages("devtools")
-#devtools::install_github("ielbadisy/mcstatsim")
+devtools::install_github("ielbadisy/mcstatsim")  # development version
 ```
 
+## A complete example
 
-## Usage
+We evaluate the normal-theory 95% confidence interval for a mean when the data
+are drawn either from a normal distribution or from a skewed (centred
+log-normal) distribution, across three sample sizes. The true mean is `0` in
+every cell, so we expect bias near zero and coverage near 0.95 -- but the
+`t`-interval is known to under-cover under skew at small `n`.
 
-Here is a basic example to get you started with `mcstatsim`:
+### 1. Simulation function and grid
 
-```{r}
+```{r example-setup}
 library(mcstatsim)
 
-# Define a simple simulation function
-sim_function <- function(a, b) {
-  Sys.sleep(0.5)  # Simulate a time-consuming process
-  return(data.frame(result = a + b))
-  }
-
-# Generate a grid of parameters
-params <- expand.grid(a = 1:3, b = 4:6)
-
-# Run simulations
-results <- runsim(n = 3, grid_params = params, sim_func = sim_function, show_progress = TRUE)
-```
-
-This example demonstrates how to define a simple simulation function, create a grid of parameters for the simulation, and run the simulations in parallel using `mcstatsim`.
-
-
-## Working example (more detailed)
-
-To illustrate the utility of this package in a concrete example, we will simulate the evaluation of several imputation methods to assess their effectiveness in preserving the accuracy of coefficient estimates in a Cox regression model. This will demonstrate the creation of a simulation function, setting up parameters, and using `mcstatsim` to run these simulations in parallel.
-
-
-**Simulation aim**: We will to assess the performance of  some imputation methods regarding their capacity to preserve the values of coefficients estimates. For this aim, we well set up the following simulation design: 
-
-
-(1) Generate fully observed data -> `data_complete`
-
-(2) estimate the beta coefficients values from `data_complete`
-
-(3) Introduce missigness under MCAR to complete dataset generated in (1) -> `data_missing`
-
-(4) impute the dataset generated at (3) -> `data_imputed`
-
-(5) Use the following simulation targets to compute the distortion between $\beta_{true}$ from `data_complete` and $\beta_i$ from `data_imputed`: 
-
-
- - **Bias**: Bias measures the average deviation of the estimated
-  coefficients from the true coefficients.
-
-$$
-\text{Bias}(\hat{\beta}) = E[\hat{\beta}] - \beta_{\text{true}}
-$$
-
-- **Coverage**: Coverage is the proportion of times the true coefficient
-  value falls within the estimated confidence interval across all
-  simulations.
-
-$$
-\text{Coverage} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\beta_{\text{true}} \in \text{CI}_i)
-$$
-
-- **Mean Squared Error (MSE)**: MSE combines both the variance of the
-  estimator and its bias, providing a single measure of estimation
-  quality.
-
-$$
-\text{MSE} = E[(\hat{\beta} - \beta_{\text{true}})^2]
-$$
-
-_NB_: All these metrics (and more) are already implemented in the `mcstatsim` package (see `?calc_bias()`, `?calc_coverage()`, and `?calc_rmse()`.
-
-
-### Step 1: Define the helpers 
-
-Since we want to preserve the spirit of the functional prgramming style, all our simulation design step will be decomposed as helper functions. In others words, the simulation steps will be translated to functions as follow: 
-
-```{r}
-pacman::p_load(mcstatsim, survival, dplyr, ggplot2)
-
-## (1) generate fully observed data -> `data_complete`
-gencox <- function(n = 300, maxTime = 7, logHR = 0.5) {
-  lambda <- 0.1
-  rho <- 1.6
-  rateC <- 0.09
-
-  # covariates
-  x1 <- rnorm(n)
-  x2 <- x1^2 + x1 + runif(n)
-  x3 <- rbinom(n, 1, 0.5)
-
-  # estimated survival times
-  U <- runif(n)
-  Tlat <- (-log(U) / (lambda * exp(logHR * (x1 + x2 + x3))))^(1 / rho)
-  Ctimes <- rexp(n, rate = rateC)
-
-  # follow-up times and event indicators
-  time <- pmin(Tlat, Ctimes)
-  status <- as.numeric(Tlat <= Ctimes)
-  time <- ifelse(time > maxTime, maxTime, time)
-  status <- ifelse(time >= maxTime, 1, status)
-  
-  data <- data.frame(time, status, x1, x2, x3)
-  data$x3 <- as.factor(data$x3)
-  
-  return(data)
-  }
-
-## (2) estimate the beta coefficients values from `data_complete`
-estimate_coxest <- function(data) {
-  myFormula <- survival::Surv(time, status) ~ x1 + x2 + x3
-  coefs <- summary(survival::coxph(myFormula, data = data))$coef
-  coefs[, 1]
+sim_mean_ci <- function(n, dist) {
+  x <- if (dist == "normal") rnorm(n) else rlnorm(n) - exp(0.5)  # both have mean 0
+  est <- mean(x)
+  se  <- sd(x) / sqrt(n)
+  crit <- qt(0.975, df = n - 1)
+  data.frame(
+    est      = est,
+    lo       = est - crit * se,
+    hi       = est + crit * se,
+    true_val = 0
+  )
 }
 
-## (3) introduce missigness under MCAR to complete dataset generated in (1) -> `data_missing`
-introduce_MCAR <- function(x, covariates = names(x), p = 0.3) {
-  
-  stopifnot(is.data.frame(x), p >= 0 && p <= 1, all(covariates %in% names(x)))
-  x[covariates] <- lapply(x[covariates], function(z) {
-    z[sample(length(z), floor(p * length(z)))] <- NA
-    z
-  })
-  
-  return(x)
-}
-
-## (4) impute the dataset generated at (3) -> `data_imputed`
-imputer <- function(data, method) {
-  stopifnot(is.data.frame(data))
-  if (is.factor(method)) {method <- as.character(method)}
-
-  supported_methods <- c("knn", "cart", "missforest", "missranger", "misscforest", "complete")
-  stopifnot(method %in% supported_methods)
-  
-  data_imputed <- switch(method,
-                 knn = VIM::kNN(data)[names(data)],
-                 cart = simputation::impute_cart(data, .~.),
-                 missforest = missForest::missForest(data, xtrue = data, verbose = FALSE)$ximp,
-                 missranger = missRanger::missRanger(data, pmm.k = 5, num.trees = 100, verbose = 0),
-                 misscforest = suppressWarnings(missCforest::missCforest(data, ntree = 10L)),
-                 complete = data[stats::complete.cases(data), ])
-  
-  return(data_imputed)
-  }
-
-## (5) compute the simulation targets
-evaluate_coxest <- function(data, truelogHR) {
-  myFormula <- survival::Surv(time, status) ~ x1 + x2 + x3
-  coefs <- summary(survival::coxph(myFormula, data = data))$coef
-  estimates <- as.data.frame(coefs)
-  
-  out <- data.frame(
-    estimates = estimates$coef,
-    ci_lower = estimates$coef - 1.96 * estimates$`se(coef)`,
-    ci_upper = estimates$coef + 1.96 * estimates$`se(coef)`
-    )
-  
-  out$bias <- mcstatsim::calc_bias(out$estimates, truelogHR)$bias
-  out$coverage <- mcstatsim::calc_coverage(out$ci_lower, out$ci_upper, truelogHR)$coverage
-  out$rmse <- mcstatsim::calc_rmse(out$estimates, truelogHR)$rmse
-  
-  return(out)
-  }
+grid <- expand.grid(n = c(10, 30, 100), dist = c("normal", "lognormal"),
+                    stringsAsFactors = FALSE)
+grid
 ```
 
-## Step 2: Define the simulation function 
+### 2. Run the simulation
 
-```{r}
-simcox <- function(n, logHR, pmiss, covariates = c("x2"), method = method){
-  data_complete <- gencox(n = n)
-  truelogHR <- estimate_coxest(data_complete)
-  data_missing <- introduce_MCAR(data_complete, covariates = covariates, p = pmiss)
-  data_imputed <- imputer(data_missing, method = method)
-  res_est <- evaluate_coxest(data_missing, truelogHR = truelogHR)
-  res <- cbind(n, pmiss, method, covariates, res_est, row.names = NULL)
-  return(res)
-  }
+`seed` gives every job its own independent `L'Ecuyer-CMRG` stream, so the run is
+reproducible and does not depend on the number of cores.
+
+```{r example-run}
+res <- runsim(
+  n           = 2000,
+  grid_params = grid,
+  sim_func    = sim_mean_ci,
+  seed        = 2025,
+  num_cores   = 2,
+  show_progress = FALSE
+)
+
+head(res)
+nrow(res)
 ```
 
+### 3. Turn replicates into a performance table
 
-## Step 3: define the parameters of the simulation 
-
-Now, to link our simulation function to the simulation parameters, we will generate a grid of paremeters with the same names as the argument of simulation function: 
-
-```{r}
-params <- expand.grid(n = c(200, 500), 
-                      logHR = 0.5,
-                      pmiss = c(0.2, 0.5),
-                      method = c("knn", "cart", "missforest", "missranger",
-                                 "misscforest", "complete"))
+```{r example-summary}
+perf <- summarise_sim(
+  res,
+  by = c("n", "dist"),
+  measures = list(
+    bias     = ~ calc_bias(est, true_val[1]),
+    coverage = ~ calc_coverage(lo, hi, true_val[1]),
+    width    = ~ calc_width(lo, hi)
+  )
+)
+perf
 ```
 
-## Step 4: Run the simulation
+Each `calc_*` measure contributes its estimate and its Monte Carlo standard
+error (the `*_mcse` columns).
 
-In one line of code, we can lunch our simulation: 
+### 4. Diagnostics
 
-```{r}
-set.seed(123)
-sim_res <- runsim(n = 100, grid_params = params, sim_func = simcox, show_progress = FALSE, num_cores = 6)
+Check that no replicate produced a non-finite estimate:
+
+```{r example-check}
+check_estimates(res, by = c("n", "dist"))
 ```
 
+How many replications would we need to pin the coverage MCSE down to 0.0025?
 
-### Step 5: summerize the results
-
-Finaly, we retreive all the results in one single dataset (i.e `sim_res`) for ploting and table production: 
-
-```{r, eval=FALSE}
-sim_res$bias <- abs(sim_res$bias)
-
-sim_res2 <- gather(sim_res, metric, value, c(bias, rmse))
-ggplot(sim_res2, aes(x=value, y=method, fill=method)) +
-  stat_summary(fun=mean, geom="point", shape=20, size=3, color="red") + 
-  theme_bw() +
-  theme(axis.text.x = element_text(hjust = 1),
-        legend.position = "none") +
-  labs(x = "", y = "") +
-  facet_grid(pmiss~metric, scales="free")
-
-ggsave("quick_res.png")
+```{r example-mcse-target}
+data.frame(perf[c("n", "dist")],
+           coverage_mcse = round(perf$coverage_mcse, 4),
+           reps_for_0.0025 = mcse_target(perf$coverage_mcse, perf$n_sim, target = 0.0025))
 ```
 
-![](man/figures/quick_res.png)
+### 5. Plots
 
-Let's skip interpreting the results since the simulation design isn't complete yet—we need to add more simulation targets and assess different hyperparameter values. However, this provides a good demonstration of how the `mcstatsim` package can efficiently organize Monte Carlo simulations without the complexities of for-loops and managing numerous parameters.
+**Convergence trace** -- the running mean of the point estimate with a
+Monte Carlo standard-error band, one panel per condition:
 
+```{r plot-convergence}
+plot_convergence(res, "est", by = c("n", "dist"))
+```
+
+**Zip plot** (Morris, White & Crowther, 2019) -- confidence intervals sorted by
+the extremeness of their z-statistic and coloured by whether they cover; a
+well-calibrated interval fills the panel up to the nominal line in the
+"covers" colour. Shown here for `n = 10`:
+
+```{r plot-zip}
+plot_zip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
+```
+
+**Performance across the design** -- coverage with a `+/- 2 MCSE` bar against
+the nominal 0.95 line:
+
+```{r plot-performance}
+plot_performance(perf, "coverage", x = "n", colour = "dist", ref = 0.95)
+```
+
+The log-normal intervals under-cover at `n = 10` -- the zip plot shows the
+misses concentrated on one side, the signature of skew -- and climb back toward
+0.95 as `n` grows. The normal-data intervals sit on 0.95 throughout.
+
+## Reproducibility and error handling
+
+```{r repro}
+a <- runsim(200, grid, sim_mean_ci, seed = 1, num_cores = 1, show_progress = FALSE)
+b <- runsim(200, grid, sim_mean_ci, seed = 1, num_cores = 4, show_progress = FALSE)
+identical(a$est, b$est)
+```
+
+If a simulation function errors on some cells, `on_error = "warn"` (or
+`"omit"`) drops those jobs and records them in `attr(x, "errors")`, which
+`failure_summary()` aggregates per condition. A `save_path` makes a long run
+resumable: it is checkpointed after each chunk of replications and re-running
+`runsim()` with the same `save_path` picks up where it stopped.
+
+## Performance measures
+
+`calc_bias()`, `calc_variance()`, `calc_mse()`, `calc_rmse()`,
+`calc_coverage()`, `calc_width()`, `calc_rejection_rate()`,
+`calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()` -- each
+returns the estimate together with its Monte Carlo standard error.
 
 ## Features
 
-- **Functional programming approach**: Streamlines the process of setting up and running simulations. 
-
-- **Parallel execution**: Leverages parallel computing to speed up the execution of simulations.
-
-- **Structured output**: Returns simulation results in a dataframe, facilitating quick analysis and visualization.
-
-
-## Summary of Changes in Version 0.5.0
-
-The major improvement in version 0.5.0 compared to version 0.1.0 is the integration of parallel computing support using the `future` package backend within the `pbapply` package. This enhancement overcomes the previous limitation, which only supported multicore parallel computing on Unix-based operating systems through `parallel::mcmapply()`. With this update, `mcstatsim` now supports parallel computing across various operating systems, including Windows, thereby providing greater flexibility and performance improvements for users.
-
+- **Functional programming approach** -- one higher-order function drives the study.
+- **Reproducible parallelism** -- per-job RNG streams; results independent of core count.
+- **Robustness** -- per-cell error/warning capture, checkpoint/resume for long runs.
+- **Evaluation layer** -- `summarise_sim()` plus a full set of MCSE-aware measures.
+- **Diagnostics** -- convergence traces, zip plots, performance plots, non-finite checks.
 
 ## Contributing
 
-Contributions are welcome! If you'd like to help improve `mcstatsim`, please feel free to submit a pull request. 
+Contributions are welcome. Please feel free to open an issue or submit a pull
+request.
