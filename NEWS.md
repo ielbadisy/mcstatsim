@@ -12,6 +12,14 @@
 * `runsim()` validates its inputs more strictly (scalar positive-integer `n`,
   non-empty `grid_params`, and a clear error when `sim_func` returns a
   non-data-frame for any job).
+* `runsim()` gains an `on_error` argument (`"stop"`, the default and previous
+  behaviour; `"warn"`; `"omit"`). With `"warn"` or `"omit"`, jobs in which
+  `sim_func` throws are dropped and every failure is logged in
+  `attr(x, "errors")` (condition, replication index, message).
+* `runsim()` now captures warnings emitted by `sim_func` (which parallel
+  backends would otherwise swallow) into `attr(x, "warnings")`.
+* New `failure_summary()` aggregates `attr(x, "errors")` into one row per
+  condition with the failure count, failure rate, and an example message.
 
 # mcstatsim 0.5.1
 

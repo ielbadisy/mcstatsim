@@ -10,7 +10,8 @@ runsim(
   sim_func,
   show_progress = TRUE,
   num_cores = parallel::detectCores() - 1,
-  seed = NULL
+  seed = NULL,
+  on_error = c("stop", "warn", "omit")
 )
 }
 \arguments{
@@ -28,9 +29,15 @@ runsim(
 independent \code{"L'Ecuyer-CMRG"} random-number stream derived from `seed`, so the
 whole run is reproducible and the result does not depend on `num_cores` or on the
 order in which jobs finish. When `NULL` (default) the session RNG is left untouched.}
+
+\item{on_error}{How to handle a job in which `sim_func` throws an error. `"stop"`
+(default) aborts the whole run, reproducing the behaviour of earlier versions.
+`"warn"` drops the failed jobs, keeps the rest, and emits a warning. `"omit"` drops
+the failed jobs silently. With `"warn"` or `"omit"`, details of every failed job are
+stored in `attr(x, "errors")`.}
 }
 \value{
-A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`.
+A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs are described in `attr(x, "errors")` (see [failure_summary()]).
 }
 \description{
 This function executes a series of Monte Carlo simulations in parallel, providing detailed progress updates.
@@ -47,6 +54,9 @@ If `seed` is supplied, `n * nrow(grid_params)` independent RNG streams are gener
 (replication-major), a given `(replication, condition)` cell always draws from the same stream
 regardless of core count, so runs are bit-for-bit reproducible. Do not call `set.seed()` inside
 `sim_func` when using `seed`, as that would defeat the per-stream design.
+
+Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
+process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
 }
 \examples{
 \dontrun{

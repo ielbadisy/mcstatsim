@@ -93,3 +93,63 @@ test_that("runsim without a seed leaves results random and carries no seed attri
   expect_null(attr(a, "seed"))
   expect_false(isTRUE(all.equal(a$x, b$x)))
 })
+
+test_that("on_error = 'stop' (default) aborts when sim_func errors", {
+  sim_func <- function(a) if (a == 2) stop("boom") else data.frame(x = a)
+  params <- expand.grid(a = 1:3)
+  expect_error(
+    runsim(2, params, sim_func, show_progress = FALSE, num_cores = 1),
+    "errored on 2 of 6 job\\(s\\).*boom"
+  )
+})
+
+test_that("on_error = 'warn' drops failed jobs, keeps the rest, logs errors", {
+  sim_func <- function(a) if (a == 2) stop("boom") else data.frame(x = a)
+  params <- expand.grid(a = 1:3)
+  expect_warning(
+    res <- runsim(4, params, sim_func, show_progress = FALSE, num_cores = 1, on_error = "warn"),
+    "errored on 4 of 12"
+  )
+  expect_equal(nrow(res), 8)
+  expect_false(any(res$x == 2))
+  err <- attr(res, "errors")
+  expect_s3_class(err, "data.frame")
+  expect_equal(nrow(err), 4)
+  expect_true(all(err$a == 2))
+  expect_equal(sort(unique(err$ID)), 1:4)
+  expect_true(all(grepl("boom", err$error)))
+})
+
+test_that("on_error = 'omit' drops failed jobs silently", {
+  sim_func <- function(a) if (a == 2) stop("boom") else data.frame(x = a)
+  params <- expand.grid(a = 1:3)
+  expect_silent(
+    res <- runsim(2, params, sim_func, show_progress = FALSE, num_cores = 1, on_error = "omit")
+  )
+  expect_equal(nrow(res), 4)
+  expect_equal(nrow(attr(res, "errors")), 2)
+})
+
+test_that("runsim aborts when every job fails even under on_error = 'omit'", {
+  sim_func <- function(a) stop("always")
+  params <- expand.grid(a = 1:2)
+  expect_error(
+    runsim(3, params, sim_func, show_progress = FALSE, num_cores = 1, on_error = "omit"),
+    "errored on all 6 job\\(s\\)"
+  )
+})
+
+test_that("runsim captures sim_func warnings without failing", {
+  sim_func <- function(a) {
+    if (a == 1) warning("mild warning")
+    data.frame(x = a)
+  }
+  params <- expand.grid(a = 1:2)
+  res <- runsim(3, params, sim_func, show_progress = FALSE, num_cores = 1)
+  expect_equal(nrow(res), 6)
+  w <- attr(res, "warnings")
+  expect_s3_class(w, "data.frame")
+  expect_equal(nrow(w), 3)
+  expect_true(all(w$a == 1))
+  expect_true(all(grepl("mild warning", w$warning)))
+})
