@@ -11,7 +11,12 @@
 #'   independent \code{"L'Ecuyer-CMRG"} random-number stream derived from `seed`, so the
 #'   whole run is reproducible and the result does not depend on `num_cores` or on the
 #'   order in which jobs finish. When `NULL` (default) the session RNG is left untouched.
-#' @return A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`.
+#' @param on_error How to handle a job in which `sim_func` throws an error. `"stop"`
+#'   (default) aborts the whole run, reproducing the behaviour of earlier versions.
+#'   `"warn"` drops the failed jobs, keeps the rest, and emits a warning. `"omit"` drops
+#'   the failed jobs silently. With `"warn"` or `"omit"`, details of every failed job are
+#'   stored in `attr(x, "errors")`.
+#' @return A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs are described in `attr(x, "errors")` (see [failure_summary()]).
 #' @details The function first validates the input parameters. It then builds a single flat list of
 #' `n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
 #' conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
@@ -23,6 +28,9 @@
 #' (replication-major), a given `(replication, condition)` cell always draws from the same stream
 #' regardless of core count, so runs are bit-for-bit reproducible. Do not call `set.seed()` inside
 #' `sim_func` when using `seed`, as that would defeat the per-stream design.
+#'
+#' Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
+#' process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
 #' @examples
 #' \dontrun{
 #' library(mcstatsim)
@@ -43,7 +51,10 @@
 #' @importFrom parallel detectCores nextRNGStream
 #' @importFrom utils object.size
 #' @export
-runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = parallel::detectCores() - 1, seed = NULL) {
+runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = parallel::detectCores() - 1, seed = NULL,
+                   on_error = c("stop", "warn", "omit")) {
+
+  on_error <- match.arg(on_error)
 
   # input validation
   if (!is.numeric(n) || length(n) != 1 || n <= 0 || n != as.integer(n)) {
@@ -117,12 +128,25 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     map_lists$stream <- streams
   }
 
+  # each job returns an envelope so a worker-side error is carried back rather
+  # than lost, and warnings are captured before the backend can suppress them
   run_one <- function(job, stream = NULL) {
     if (!is.null(stream)) {
       RNGkind("L'Ecuyer-CMRG")
       assign(".Random.seed", stream, envir = globalenv())
     }
-    do.call(sim_func, job)
+    warns <- character()
+    value <- withCallingHandlers(
+      tryCatch(
+        do.call(sim_func, job),
+        error = function(e) structure(list(message = conditionMessage(e)), class = "runsim_failed_job")
+      ),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    list(value = value, warnings = warns)
   }
 
   # simulation engine: one load-balanced parallel pass over every job
@@ -132,20 +156,68 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     stop("Failed to obtain simulation results for every job.")
   }
 
-  is_df <- vapply(results, is.data.frame, logical(1))
-  if (!all(is_df)) {
-    stop("'sim_func' must return a data frame for every job; ",
-         sum(!is_df), " of ", n_jobs, " job(s) returned something else.")
+  values <- lapply(results, `[[`, "value")
+  warns  <- lapply(results, `[[`, "warnings")
+  failed <- vapply(values, inherits, logical(1), what = "runsim_failed_job")
+
+  if (any(failed)) {
+    errors_df <- data.frame(
+      grid_params[cond_index[failed], , drop = FALSE],
+      ID = rep_index[failed],
+      error = vapply(values[failed], function(v) v$message, character(1)),
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+    if (on_error == "stop") {
+      stop(sprintf("'sim_func' errored on %d of %d job(s). First error: %s",
+                   sum(failed), n_jobs, errors_df$error[1]))
+    }
+    if (on_error == "warn") {
+      warning(sprintf("'sim_func' errored on %d of %d job(s); those cells were dropped. See attr(, \"errors\").",
+                      sum(failed), n_jobs))
+    }
+  } else {
+    errors_df <- NULL
   }
 
-  row_counts <- vapply(results, nrow, integer(1))
-  combined_results <- do.call(rbind, results)
-  combined_results$ID <- rep(rep_index, times = row_counts)
+  keep <- !failed
+  ok_values <- values[keep]
+
+  if (length(ok_values) == 0L) {
+    stop(sprintf("'sim_func' errored on all %d job(s). First error: %s",
+                 n_jobs, errors_df$error[1]))
+  }
+
+  is_df <- vapply(ok_values, is.data.frame, logical(1))
+  if (!all(is_df)) {
+    stop("'sim_func' must return a data frame for every job; ",
+         sum(!is_df), " of ", length(ok_values), " successful job(s) returned something else.")
+  }
+
+  row_counts <- vapply(ok_values, nrow, integer(1))
+  combined_results <- do.call(rbind, ok_values)
+  combined_results$ID <- rep(rep_index[keep], times = row_counts)
   rownames(combined_results) <- NULL
+
+  has_warn <- lengths(warns) > 0L
+  if (any(has_warn)) {
+    warn_index <- rep(which(has_warn), times = lengths(warns[has_warn]))
+    attr(combined_results, "warnings") <- data.frame(
+      grid_params[cond_index[warn_index], , drop = FALSE],
+      ID = rep_index[warn_index],
+      warning = unlist(warns[has_warn], use.names = FALSE),
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+  }
+  if (!is.null(errors_df)) attr(combined_results, "errors") <- errors_df
   if (!is.null(seed)) attr(combined_results, "seed") <- seed
 
   if (show_progress) {
     total_elapsed_time <- as.numeric(Sys.time() - start_time, units = "secs")
+    if (any(failed)) {
+      cat(sprintf("Dropped %d failed job(s); see attr(, \"errors\").\n", sum(failed)))
+    }
     cat("All simulations complete at", format(Sys.time(), "%X"), "\n")
     cat("Date:", format(Sys.time(), "%Y-%m-%d"), "\n")
     cat(sprintf("Total elapsed time: %02d:%02d:%02d\n",
