@@ -7,12 +7,22 @@
 #' @param sim_func The simulation function to be applied. This function should accept parameters corresponding to a row in `grid_params` and return a dataframe or a list that can be row-bound.
 #' @param show_progress Logical indicating whether to display progress messages during the execution of the simulations.
 #' @param num_cores The number of cores to use for parallel execution. The default is one less than the total number of cores available on the system.
-#' @return A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from.
+#' @param seed Optional single number. When supplied, every job is assigned its own
+#'   independent \code{"L'Ecuyer-CMRG"} random-number stream derived from `seed`, so the
+#'   whole run is reproducible and the result does not depend on `num_cores` or on the
+#'   order in which jobs finish. When `NULL` (default) the session RNG is left untouched.
+#' @return A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`.
 #' @details The function first validates the input parameters. It then builds a single flat list of
 #' `n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
 #' conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
 #' [mcpmap()]. Results are row-bound into a single dataframe and tagged with the replication index in
 #' the `ID` column, preserving the layout produced by earlier versions of the package.
+#'
+#' If `seed` is supplied, `n * nrow(grid_params)` independent RNG streams are generated up front with
+#' [parallel::nextRNGStream()] and handed to the jobs by position. Because job positions are fixed
+#' (replication-major), a given `(replication, condition)` cell always draws from the same stream
+#' regardless of core count, so runs are bit-for-bit reproducible. Do not call `set.seed()` inside
+#' `sim_func` when using `seed`, as that would defeat the per-stream design.
 #' @examples
 #' \dontrun{
 #' library(mcstatsim)
@@ -30,10 +40,10 @@
 #' results <- runsim(n = 1, grid_params = params, sim_func = sim_function)
 #' print(results)
 #' }
-#' @importFrom parallel detectCores
+#' @importFrom parallel detectCores nextRNGStream
 #' @importFrom utils object.size
 #' @export
-runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = parallel::detectCores() - 1) {
+runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = parallel::detectCores() - 1, seed = NULL) {
 
   # input validation
   if (!is.numeric(n) || length(n) != 1 || n <= 0 || n != as.integer(n)) {
@@ -46,6 +56,10 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
 
   if (!is.function(sim_func)) {
     stop("'sim_func' must be a function.")
+  }
+
+  if (!is.null(seed) && (!is.numeric(seed) || length(seed) != 1 || is.na(seed))) {
+    stop("'seed' must be a single number or NULL.")
   }
 
   n <- as.integer(n)
@@ -66,15 +80,53 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
 
   start_time <- Sys.time()
 
-  # replication-major flat job list: each grid column recycled n times so that
-  # jobs run as (rep 1: cond 1..K), (rep 2: cond 1..K), ...
+  # replication-major flat job list: job k holds the argument list for
+  # (replication rep_index[k], condition cond_index[k]); jobs run as
+  # (rep 1: cond 1..K), (rep 2: cond 1..K), ...
   param_names <- names(grid_params)
-  job_args <- lapply(param_names, function(nm) rep(grid_params[[nm]], times = n))
-  names(job_args) <- param_names
+  cond_index <- rep(seq_len(n_cond), times = n)
   rep_index <- rep(seq_len(n), each = n_cond)
+  jobs <- lapply(cond_index, function(ci) {
+    args <- lapply(param_names, function(nm) grid_params[[nm]][[ci]])
+    names(args) <- param_names
+    args
+  })
+
+  # one independent L'Ecuyer-CMRG stream per job, assigned by position
+  map_lists <- list(job = jobs)
+  if (!is.null(seed)) {
+    # snapshot and restore the caller's RNG state so runsim() has no side effect
+    had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+    saved_seed <- if (had_seed) get(".Random.seed", envir = globalenv(), inherits = FALSE)
+    saved_kind <- RNGkind()
+    on.exit({
+      RNGkind(saved_kind[1], saved_kind[2])
+      if (had_seed) assign(".Random.seed", saved_seed, envir = globalenv())
+      else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE))
+        rm(".Random.seed", envir = globalenv())
+    }, add = TRUE)
+
+    RNGkind("L'Ecuyer-CMRG")
+    set.seed(as.integer(seed))
+    streams <- vector("list", n_jobs)
+    state <- .Random.seed
+    for (k in seq_len(n_jobs)) {
+      streams[[k]] <- state
+      state <- parallel::nextRNGStream(state)
+    }
+    map_lists$stream <- streams
+  }
+
+  run_one <- function(job, stream = NULL) {
+    if (!is.null(stream)) {
+      RNGkind("L'Ecuyer-CMRG")
+      assign(".Random.seed", stream, envir = globalenv())
+    }
+    do.call(sim_func, job)
+  }
 
   # simulation engine: one load-balanced parallel pass over every job
-  results <- mcpmap(lists = job_args, func = sim_func, num_cores = num_cores, show_progress = show_progress)
+  results <- mcpmap(lists = map_lists, func = run_one, num_cores = num_cores, show_progress = show_progress)
 
   if (is.null(results) || length(results) != n_jobs) {
     stop("Failed to obtain simulation results for every job.")
@@ -90,6 +142,7 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   combined_results <- do.call(rbind, results)
   combined_results$ID <- rep(rep_index, times = row_counts)
   rownames(combined_results) <- NULL
+  if (!is.null(seed)) attr(combined_results, "seed") <- seed
 
   if (show_progress) {
     total_elapsed_time <- as.numeric(Sys.time() - start_time, units = "secs")

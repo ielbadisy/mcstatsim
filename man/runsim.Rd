@@ -9,7 +9,8 @@ runsim(
   grid_params,
   sim_func,
   show_progress = TRUE,
-  num_cores = parallel::detectCores() - 1
+  num_cores = parallel::detectCores() - 1,
+  seed = NULL
 )
 }
 \arguments{
@@ -22,9 +23,14 @@ runsim(
 \item{show_progress}{Logical indicating whether to display progress messages during the execution of the simulations.}
 
 \item{num_cores}{The number of cores to use for parallel execution. The default is one less than the total number of cores available on the system.}
+
+\item{seed}{Optional single number. When supplied, every job is assigned its own
+independent \code{"L'Ecuyer-CMRG"} random-number stream derived from `seed`, so the
+whole run is reproducible and the result does not depend on `num_cores` or on the
+order in which jobs finish. When `NULL` (default) the session RNG is left untouched.}
 }
 \value{
-A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from.
+A combined dataframe of all simulation results. Each row carries an `ID` column giving the replication index (1 to `n`) it came from. When `seed` is supplied it is stored in `attr(x, "seed")`.
 }
 \description{
 This function executes a series of Monte Carlo simulations in parallel, providing detailed progress updates.
@@ -35,6 +41,12 @@ The function first validates the input parameters. It then builds a single flat 
 conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
 [mcpmap()]. Results are row-bound into a single dataframe and tagged with the replication index in
 the `ID` column, preserving the layout produced by earlier versions of the package.
+
+If `seed` is supplied, `n * nrow(grid_params)` independent RNG streams are generated up front with
+[parallel::nextRNGStream()] and handed to the jobs by position. Because job positions are fixed
+(replication-major), a given `(replication, condition)` cell always draws from the same stream
+regardless of core count, so runs are bit-for-bit reproducible. Do not call `set.seed()` inside
+`sim_func` when using `seed`, as that would defeat the per-stream design.
 }
 \examples{
 \dontrun{
