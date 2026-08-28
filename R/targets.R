@@ -284,20 +284,20 @@ calc_relative_mse <- function(estimates, true_param) {
 #' Calculate Relative Root Mean Squared Error and its Monte Carlo Standard Error
 #'
 #' Computes the Relative Root Mean Squared Error (Relative RMSE) of a set of estimates with respect
-#' to a true parameter value. The Relative RMSE is derived from the Relative Mean Squared Error (MSE),
-#' providing a scale-independent measure of error that facilitates comparisons across different scales
-#' of the true parameter. This function is especially useful for evaluating the accuracy of estimates
-#' when the magnitude of the true parameter varies significantly across different scenarios. The function
-#' gracefully handles cases where the true parameter is zero by returning `NA` for both Relative RMSE
-#' and its MCSE, to avoid division by zero. The MCSE for the Relative RMSE is not directly computed
-#' in this function and is marked as a placeholder for future implementation.
+#' to a true parameter value. The Relative RMSE is the square root of the Relative Mean Squared Error
+#' (see [calc_relative_mse()]), a scale-independent measure of error that facilitates comparisons
+#' across different scales of the true parameter. This function is especially useful for evaluating the
+#' accuracy of estimates when the magnitude of the true parameter varies significantly across
+#' different scenarios. The function gracefully handles cases where the true parameter is zero by
+#' returning `NA` for both Relative RMSE and its MCSE, to avoid division by zero.
 #'
 #' @param estimates A numeric vector of estimates from a simulation or sampling process.
 #' @param true_param The true parameter value that the estimates are intended to approximate.
 #' Note that `true_param` must not be zero, as the calculation involves division by the true parameter value.
 #' @return A list with two components: `rel_rmse`, the calculated Relative Root Mean Squared Error of the
-#' estimates, and `rel_rmse_mcse`, the Monte Carlo Standard Error of the Relative RMSE. The MCSE is
-#' currently not calculated and returned as `NA`. This is a placeholder for future implementation.
+#' estimates, and `rel_rmse_mcse`, the Monte Carlo Standard Error of the Relative RMSE, obtained from the
+#' MCSE of the Relative MSE by the delta method (`rel_mse_mcse / (2 * rel_rmse)`). Both are `NA` when
+#' `true_param` is zero, and `rel_rmse_mcse` is `NA` when `rel_rmse` is zero.
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50 # Non-zero true parameter
@@ -310,11 +310,15 @@ calc_relative_rmse <- function(estimates, true_param) {
     return(list(rel_rmse = NA, rel_rmse_mcse = NA))
   }
 
-  relative_mse <- calc_relative_mse(estimates, true_param)$rel_mse
-  relative_rmse <- sqrt(relative_mse)
+  rmse_rel <- calc_relative_mse(estimates, true_param)
+  relative_rmse <- sqrt(rmse_rel$rel_mse)
 
-  relative_mse_mcse <- calc_relative_mse(estimates, true_param)$rel_mse_mcse
-  relative_rmse_mcse <- sqrt(relative_mse_mcse)
+  # delta method: rel_rmse = sqrt(rel_mse) => SE(rel_rmse) ~ SE(rel_mse) / (2 * rel_rmse)
+  relative_rmse_mcse <- if (isTRUE(relative_rmse > 0)) {
+    rmse_rel$rel_mse_mcse / (2 * relative_rmse)
+  } else {
+    NA_real_
+  }
 
   return(list(rel_rmse = relative_rmse, rel_rmse_mcse = relative_rmse_mcse))
 }

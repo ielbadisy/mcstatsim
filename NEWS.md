@@ -1,3 +1,11 @@
+# mcstatsim 0.7.1
+
+* `calc_relative_rmse()` now returns a correct Monte Carlo standard error. The
+  previous version reported `sqrt(rel_mse_mcse)`, which is not a valid
+  transformation; the MCSE is now obtained from the MCSE of the relative MSE by
+  the delta method, `rel_mse_mcse / (2 * rel_rmse)` (and is `NA` when
+  `rel_rmse` is zero).
+
 # mcstatsim 0.7.0
 
 * New `summarise_sim()` collapses replicate-level `runsim()` output into one row

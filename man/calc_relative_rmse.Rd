@@ -14,18 +14,18 @@ Note that `true_param` must not be zero, as the calculation involves division by
 }
 \value{
 A list with two components: `rel_rmse`, the calculated Relative Root Mean Squared Error of the
-estimates, and `rel_rmse_mcse`, the Monte Carlo Standard Error of the Relative RMSE. The MCSE is
-currently not calculated and returned as `NA`. This is a placeholder for future implementation.
+estimates, and `rel_rmse_mcse`, the Monte Carlo Standard Error of the Relative RMSE, obtained from the
+MCSE of the Relative MSE by the delta method (`rel_mse_mcse / (2 * rel_rmse)`). Both are `NA` when
+`true_param` is zero, and `rel_rmse_mcse` is `NA` when `rel_rmse` is zero.
 }
 \description{
 Computes the Relative Root Mean Squared Error (Relative RMSE) of a set of estimates with respect
-to a true parameter value. The Relative RMSE is derived from the Relative Mean Squared Error (MSE),
-providing a scale-independent measure of error that facilitates comparisons across different scales
-of the true parameter. This function is especially useful for evaluating the accuracy of estimates
-when the magnitude of the true parameter varies significantly across different scenarios. The function
-gracefully handles cases where the true parameter is zero by returning `NA` for both Relative RMSE
-and its MCSE, to avoid division by zero. The MCSE for the Relative RMSE is not directly computed
-in this function and is marked as a placeholder for future implementation.
+to a true parameter value. The Relative RMSE is the square root of the Relative Mean Squared Error
+(see [calc_relative_mse()]), a scale-independent measure of error that facilitates comparisons
+across different scales of the true parameter. This function is especially useful for evaluating the
+accuracy of estimates when the magnitude of the true parameter varies significantly across
+different scenarios. The function gracefully handles cases where the true parameter is zero by
+returning `NA` for both Relative RMSE and its MCSE, to avoid division by zero.
 }
 \examples{
 estimates <- rnorm(100, mean = 50, sd = 10)
