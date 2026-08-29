@@ -5,3 +5,5 @@
 *.Rcheck/
 *.tar.gz
 README.html
+/doc/
+/Meta/

@@ -15,3 +15,5 @@
 ^mcstatsim-JOSS\.pdf$
 ^mcstatsim-JOSS_files$
 ^paper\.bib$
+^doc$
+^Meta$
