@@ -8,6 +8,8 @@
 #' @param x A dataframe returned by [runsim()].
 #' @param n Optional total number of replications per condition, used to turn failure
 #'   counts into rates. If `NULL` (default) it is taken as `max(x$ID)`.
+#' @param digits Number of decimal places to round `failure_rate` to; `NULL` leaves it
+#'   unrounded. Default 4.
 #' @return A dataframe with the grid columns that describe each condition, plus
 #'   `n_failed`, `failure_rate`, and `example_error`. If `x` has no `"errors"`
 #'   attribute (no job failed, or `on_error = "stop"` was used) a zero-row dataframe
@@ -22,7 +24,7 @@
 #'               on_error = "omit")
 #' failure_summary(res)
 #' @export
-failure_summary <- function(x, n = NULL) {
+failure_summary <- function(x, n = NULL, digits = 4) {
   errors <- attr(x, "errors")
   cond_cols <- setdiff(names(errors), c("ID", "error"))
 
@@ -63,5 +65,6 @@ failure_summary <- function(x, n = NULL) {
 
   out <- do.call(rbind, rows)
   rownames(out) <- NULL
+  if (!is.null(digits)) out$failure_rate <- .mcstatsim_round(out$failure_rate, digits)
   out[order(-out$n_failed), , drop = FALSE]
 }

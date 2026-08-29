@@ -7,7 +7,7 @@
 [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/mcstatsim)](https://CRAN.R-project.org/package=mcstatsim)
 [![R-CMD-check](https://github.com/ielbadisy/mcstatsim/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ielbadisy/mcstatsim/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.r-project.org/Licenses/AGPL-3)
 <!-- badges: end -->
 
 ## About
@@ -118,24 +118,25 @@ perf <- summarise_sim(
   )
 )
 perf
-#>     n      dist n_sim          bias   bias_mcse coverage coverage_mcse
-#> 1  10 lognormal  2000 -0.0112783788 0.015265279   0.8370   0.008259268
-#> 2  10    normal  2000  0.0091781423 0.006846178   0.9515   0.004803527
-#> 3  30 lognormal  2000 -0.0008619737 0.008962467   0.8750   0.007395100
-#> 4  30    normal  2000  0.0016265874 0.004160230   0.9455   0.005075911
-#> 5 100 lognormal  2000 -0.0006907869 0.004822183   0.9190   0.006100779
-#> 6 100    normal  2000 -0.0003597858 0.002255103   0.9470   0.005009541
-#>       width  width_mcse
-#> 1 2.4341283 0.039559470
-#> 2 1.3913083 0.007452100
-#> 3 1.4439614 0.018121420
-#> 4 0.7402221 0.002201001
-#> 5 0.8079286 0.006179344
-#> 6 0.3956937 0.000631265
+#>     n      dist n_sim    bias bias_mcse coverage coverage_mcse  width
+#> 1  10 lognormal  2000 -0.0113    0.0153   0.8370        0.0083 2.4341
+#> 2  10    normal  2000  0.0092    0.0068   0.9515        0.0048 1.3913
+#> 3  30 lognormal  2000 -0.0009    0.0090   0.8750        0.0074 1.4440
+#> 4  30    normal  2000  0.0016    0.0042   0.9455        0.0051 0.7402
+#> 5 100 lognormal  2000 -0.0007    0.0048   0.9190        0.0061 0.8079
+#> 6 100    normal  2000 -0.0004    0.0023   0.9470        0.0050 0.3957
+#>   width_mcse
+#> 1     0.0396
+#> 2     0.0075
+#> 3     0.0181
+#> 4     0.0022
+#> 5     0.0062
+#> 6     0.0006
 ```
 
 Each `calc_*` measure contributes its estimate and its Monte Carlo standard
-error (the `*_mcse` columns).
+error (the `*_mcse` columns). Numeric columns are rounded to `digits` (default
+4); pass `digits = NULL` to `summarise_sim()` for full precision.
 
 ### 4. Diagnostics
 
@@ -154,12 +155,12 @@ data.frame(perf[c("n", "dist")],
            coverage_mcse = round(perf$coverage_mcse, 4),
            reps_for_0.0025 = mcse_target(perf$coverage_mcse, perf$n_sim, target = 0.0025))
 #>     n      dist coverage_mcse reps_for_0.0025
-#> 1  10 lognormal        0.0083           21829
-#> 2  10    normal        0.0048            7384
-#> 3  30 lognormal        0.0074           17500
-#> 4  30    normal        0.0051            8245
-#> 5 100 lognormal        0.0061           11911
-#> 6 100    normal        0.0050            8031
+#> 1  10 lognormal        0.0083           22045
+#> 2  10    normal        0.0048            7373
+#> 3  30 lognormal        0.0074           17524
+#> 4  30    normal        0.0051            8324
+#> 5 100 lognormal        0.0061           11908
+#> 6 100    normal        0.0050            8000
 ```
 
 ### 5. Plots

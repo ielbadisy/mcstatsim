@@ -4,7 +4,7 @@
 \alias{calc_coverage}
 \title{Calculate Coverage Probability and its Monte Carlo Standard Error}
 \usage{
-calc_coverage(lower_bound, upper_bound, true_param)
+calc_coverage(lower_bound, upper_bound, true_param, digits = 4)
 }
 \arguments{
 \item{lower_bound}{A numeric vector of lower bounds of confidence intervals.}
@@ -12,6 +12,8 @@ calc_coverage(lower_bound, upper_bound, true_param)
 \item{upper_bound}{A numeric vector of upper bounds of confidence intervals, corresponding to `lower_bound`.}
 
 \item{true_param}{The true parameter value that the confidence intervals are intended to estimate.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `coverage`, the calculated coverage probability of the confidence intervals,

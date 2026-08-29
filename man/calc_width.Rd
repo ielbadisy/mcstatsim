@@ -4,12 +4,14 @@
 \alias{calc_width}
 \title{Calculate Average Width of Confidence Intervals and its Monte Carlo Standard Error}
 \usage{
-calc_width(lower_bound, upper_bound)
+calc_width(lower_bound, upper_bound, digits = 4)
 }
 \arguments{
 \item{lower_bound}{A numeric vector of lower bounds of confidence intervals.}
 
 \item{upper_bound}{A numeric vector of upper bounds of confidence intervals, corresponding to `lower_bound`.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `width`, the average width of the confidence intervals, and

@@ -4,13 +4,16 @@
 \alias{failure_summary}
 \title{Summarise Failed Jobs from a Simulation Run}
 \usage{
-failure_summary(x, n = NULL)
+failure_summary(x, n = NULL, digits = 4)
 }
 \arguments{
 \item{x}{A dataframe returned by [runsim()].}
 
 \item{n}{Optional total number of replications per condition, used to turn failure
 counts into rates. If `NULL` (default) it is taken as `max(x$ID)`.}
+
+\item{digits}{Number of decimal places to round `failure_rate` to; `NULL` leaves it
+unrounded. Default 4.}
 }
 \value{
 A dataframe with the grid columns that describe each condition, plus

@@ -74,3 +74,18 @@ test_that("summarise_sim flags colliding output columns", {
     "collide"
   )
 })
+
+test_that("summarise_sim rounds measure columns to digits (default 4), not the by/n_sim columns", {
+  res <- make_res()
+  meas <- list(mean_est = ~ mean(est))
+  d4 <- summarise_sim(res, by = "n_obs", measures = meas)          # default digits = 4
+  d2 <- summarise_sim(res, by = "n_obs", measures = meas, digits = 2)
+  draw <- summarise_sim(res, by = "n_obs", measures = meas, digits = NULL)
+
+  expect_equal(d4$mean_est, round(draw$mean_est, 4))
+  expect_equal(d2$mean_est, round(draw$mean_est, 2))
+  expect_equal(d4$n_obs, draw$n_obs)      # grouping column untouched
+  expect_equal(d4$n_sim, draw$n_sim)
+  expect_error(summarise_sim(res, by = "n_obs", measures = meas, digits = "x"),
+               "single number or NULL")
+})

@@ -4,13 +4,15 @@
 \alias{calc_relative_mse}
 \title{Calculate Relative Mean Squared Error and its Monte Carlo Standard Error}
 \usage{
-calc_relative_mse(estimates, true_param)
+calc_relative_mse(estimates, true_param, digits = 4)
 }
 \arguments{
 \item{estimates}{A numeric vector of estimates from a simulation or sampling process.}
 
 \item{true_param}{The true parameter value that the estimates are intended to approximate.
 Note that `true_param` must not be zero, as the calculation involves division by the true parameter value.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `rel_mse`, the calculated Relative Mean Squared Error of the estimates,

@@ -47,6 +47,8 @@ mcse_target <- function(mcse_current, n_current, target) {
 #'   except `ID` and the grouping columns in `by`.
 #' @param by Character vector of column names identifying a simulation condition. If
 #'   `NULL` (default) the whole dataframe is treated as one group.
+#' @param digits Number of decimal places to round `prop_bad` to; `NULL` leaves it
+#'   unrounded. Default 4.
 #' @return A dataframe with one row per (condition, column) that has at least one
 #'   non-finite value: the `by` columns, `column`, `n_bad`, `n_total`, and `prop_bad`,
 #'   ordered by decreasing `prop_bad`. A zero-row dataframe (with those columns) means
@@ -60,7 +62,7 @@ mcse_target <- function(mcse_current, n_current, target) {
 #' res <- runsim(20, grid, sim_func, show_progress = FALSE, num_cores = 1)
 #' check_estimates(res, by = "mu")
 #' @export
-check_estimates <- function(data, cols = NULL, by = NULL) {
+check_estimates <- function(data, cols = NULL, by = NULL, digits = 4) {
   if (!is.data.frame(data)) {
     stop("'data' must be a dataframe, typically the output of runsim().")
   }
@@ -127,5 +129,6 @@ check_estimates <- function(data, cols = NULL, by = NULL) {
   out <- do.call(rbind, pieces)
   out <- out[order(-out$prop_bad), out_cols, drop = FALSE]
   rownames(out) <- NULL
+  if (!is.null(digits)) out$prop_bad <- .mcstatsim_round(out$prop_bad, digits)
   out
 }

@@ -4,10 +4,12 @@
 \alias{calc_variance}
 \title{Calculate Variance and its Monte Carlo Standard Error}
 \usage{
-calc_variance(estimates)
+calc_variance(estimates, digits = 4)
 }
 \arguments{
 \item{estimates}{A numeric vector of estimates from a simulation or sampling process.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list containing two elements: `variance`, the calculated sample variance of the estimates,

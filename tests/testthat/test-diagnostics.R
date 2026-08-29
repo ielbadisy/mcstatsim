@@ -55,3 +55,10 @@ test_that("check_estimates works without grouping and with an explicit cols argu
   chk2 <- check_estimates(df)
   expect_setequal(chk2$column, "a")
 })
+
+test_that("check_estimates rounds prop_bad to digits (default 4)", {
+  df <- data.frame(a = c(rep(1, 6), Inf), ID = 1:7)   # prop_bad = 1/7 = 0.142857...
+  expect_equal(check_estimates(df, cols = "a")$prop_bad, round(1 / 7, 4))
+  expect_equal(check_estimates(df, cols = "a", digits = 2)$prop_bad, 0.14)
+  expect_equal(check_estimates(df, cols = "a", digits = NULL)$prop_bad, 1 / 7)
+})

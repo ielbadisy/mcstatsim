@@ -4,12 +4,14 @@
 \alias{calc_bias}
 \title{Calculate Bias and Bias Monte Carlo Standard Error}
 \usage{
-calc_bias(estimates, true_param)
+calc_bias(estimates, true_param, digits = 4)
 }
 \arguments{
 \item{estimates}{A numeric vector of estimates from the simulation or sampling process.}
 
 \item{true_param}{The true parameter value that the estimates are intended to approximate.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `bias`, the calculated bias of the estimates, and `bias_mcse`,

@@ -4,7 +4,7 @@
 \alias{summarise_sim}
 \title{Summarise Replicate-Level Simulation Output into a Performance Table}
 \usage{
-summarise_sim(data, by = NULL, measures)
+summarise_sim(data, by = NULL, measures, digits = 4)
 }
 \arguments{
 \item{data}{A dataframe of replicate-level results, typically from [runsim()]: one row
@@ -29,6 +29,13 @@ The element names are labels only. A measure that returns a length-one value bec
 column named after the measure; a measure that returns a named vector of length > 1
 (as the `calc_*` functions do) contributes one column per name. Column-name collisions
 across measures are an error.}
+
+\item{digits}{Number of decimal places to round the performance-measure columns to
+(the `by` columns and `n_sim` are left alone); `NULL` returns them unrounded.
+Default 4. Note that measures built from the `calc_*` functions are already rounded
+to those functions' own `digits` (also 4 by default); pass `digits = NULL` inside
+such a measure, e.g. `~ calc_bias(est, true_val[1], digits = NULL)`, if you need
+more precision than that.}
 }
 \value{
 A dataframe with one row per group: the `by` columns, then `n_sim` (the number of

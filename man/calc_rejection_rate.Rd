@@ -4,13 +4,15 @@
 \alias{calc_rejection_rate}
 \title{Calculate Rejection Rate and its Monte Carlo Standard Error}
 \usage{
-calc_rejection_rate(p_values, alpha = 0.05)
+calc_rejection_rate(p_values, alpha = 0.05, digits = 4)
 }
 \arguments{
 \item{p_values}{A numeric vector of p-values from multiple hypothesis tests.}
 
 \item{alpha}{The significance level used to determine if a p-value indicates a significant result.
 Default is 0.05.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `rejection_rate`, the proportion of tests that resulted in

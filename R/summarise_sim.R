@@ -46,8 +46,14 @@
 #'     coverage = ~ calc_coverage(lo, hi, true_val[1])
 #'   )
 #' )
+#' @param digits Number of decimal places to round the performance-measure columns to
+#'   (the `by` columns and `n_sim` are left alone); `NULL` returns them unrounded.
+#'   Default 4. Note that measures built from the `calc_*` functions are already rounded
+#'   to those functions' own `digits` (also 4 by default); pass `digits = NULL` inside
+#'   such a measure, e.g. `~ calc_bias(est, true_val[1], digits = NULL)`, if you need
+#'   more precision than that.
 #' @export
-summarise_sim <- function(data, by = NULL, measures) {
+summarise_sim <- function(data, by = NULL, measures, digits = 4) {
   if (!is.data.frame(data)) {
     stop("'data' must be a dataframe, typically the output of runsim().")
   }
@@ -127,6 +133,12 @@ summarise_sim <- function(data, by = NULL, measures) {
   }, numeric(1))
 
   measure_mat <- do.call(rbind, lapply(flats, function(v) v[col_names]))
+  if (!is.null(digits)) {
+    if (!is.numeric(digits) || length(digits) != 1 || is.na(digits)) {
+      stop("'digits' must be a single number or NULL.")
+    }
+    measure_mat <- round(measure_mat, digits)
+  }
   out <- data.frame(measure_mat, stringsAsFactors = FALSE)
   names(out) <- col_names
   out <- cbind(n_sim = n_sim, out)

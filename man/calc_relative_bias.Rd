@@ -4,7 +4,7 @@
 \alias{calc_relative_bias}
 \title{Calculate Relative Bias and its Monte Carlo Standard Error}
 \usage{
-calc_relative_bias(estimates, true_param)
+calc_relative_bias(estimates, true_param, digits = 4)
 }
 \arguments{
 \item{estimates}{A numeric vector of estimates from a simulation or sampling process.}
@@ -12,6 +12,8 @@ calc_relative_bias(estimates, true_param)
 \item{true_param}{The true parameter value that the estimates are intended to approximate.
 Note that `true_param` must not be zero, as relative bias calculation involves division by
 the true parameter value.}
+
+\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `rel_bias`, the calculated relative bias of the estimates, and

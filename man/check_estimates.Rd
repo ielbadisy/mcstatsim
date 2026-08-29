@@ -4,7 +4,7 @@
 \alias{check_estimates}
 \title{Flag Non-Finite or Degenerate Estimates in Simulation Output}
 \usage{
-check_estimates(data, cols = NULL, by = NULL)
+check_estimates(data, cols = NULL, by = NULL, digits = 4)
 }
 \arguments{
 \item{data}{A dataframe of replicate-level results, typically from [runsim()].}
@@ -14,6 +14,9 @@ except `ID` and the grouping columns in `by`.}
 
 \item{by}{Character vector of column names identifying a simulation condition. If
 `NULL` (default) the whole dataframe is treated as one group.}
+
+\item{digits}{Number of decimal places to round `prop_bad` to; `NULL` leaves it
+unrounded. Default 4.}
 }
 \value{
 A dataframe with one row per (condition, column) that has at least one

@@ -1,3 +1,12 @@
+# mcstatsim 0.9.1
+
+* The result-producing functions gain a `digits` argument (default `4`;
+  `NULL` to disable rounding): `calc_bias()`, `calc_variance()`, `calc_mse()`,
+  `calc_rmse()`, `calc_coverage()`, `calc_width()`, `calc_rejection_rate()`,
+  `calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()`,
+  `summarise_sim()` (rounds the measure columns only), `failure_summary()`
+  (`failure_rate`) and `check_estimates()` (`prop_bad`).
+
 # mcstatsim 0.9.0
 
 ## `runsim()` engine
