@@ -1,3 +1,11 @@
+# mcstatsim 0.9.2
+
+* Added a PDF vignette, "Monte Carlo simulation studies with mcstatsim", a
+  detailed walk-through of `runsim()`, reproducible RNG, error handling,
+  checkpoint/resume, `summarise_sim()`, the `calc_*` measures, the diagnostic
+  helpers and plots, and a worked case study. `knitr` and `rmarkdown` are added
+  to `Suggests`.
+
 # mcstatsim 0.9.1
 
 * The result-producing functions gain a `digits` argument (default `4`;

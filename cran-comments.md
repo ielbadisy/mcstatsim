@@ -1,15 +1,16 @@
 ## Submission
 
-This is a feature update from the CRAN version 0.5.1 to 0.9.1. It adds
+This is a feature update from the CRAN version 0.5.1 to 0.9.2. It adds
 reproducible per-replication RNG streams, error and warning capture, checkpoint
 and resume for long runs, a `summarise_sim()` evaluation layer, diagnostic
 helpers (`failure_summary()`, `check_estimates()`, `mcse_target()`) and plots,
-and a `digits` argument on the result-producing functions. See NEWS.md for the
-full list. `calc_relative_rmse()` has a corrected Monte Carlo standard error.
+a `digits` argument on the result-producing functions, and a PDF vignette. See
+NEWS.md for the full list. `calc_relative_rmse()` has a corrected Monte Carlo
+standard error.
 
-`ggplot2` is added to Suggests for the three plotting helpers; it is used
-conditionally and the rest of the package has no new dependencies (Imports is
-still `functionals` only).
+`ggplot2`, `knitr` and `rmarkdown` are added to Suggests (for the plotting
+helpers and the vignette); they are used conditionally and Imports is still
+`functionals` only.
 
 ## Test environments
 

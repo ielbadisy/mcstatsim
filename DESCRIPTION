@@ -1,7 +1,7 @@
 Package: mcstatsim
 Type: Package
 Title: Monte Carlo Statistical Simulation Tools Using a Functional Approach
-Version: 0.9.1
+Version: 0.9.2
 Authors@R: c(person("Imad", "El Badisy", 
       role = c("aut", "cre","cph"),
     email = "elbadisyimad@gmail.com"))
@@ -20,7 +20,10 @@ Imports:
     functionals
 Suggests:
     testthat (>= 3.0.0),
-    ggplot2
+    ggplot2,
+    knitr,
+    rmarkdown
 URL: https://CRAN.R-project.org/package=mcstatsim
 BugReports: https://github.com/ielbadisy/mcstatsim/issues
 Config/testthat/edition: 3
+VignetteBuilder: knitr
