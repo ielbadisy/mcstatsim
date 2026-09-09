@@ -201,6 +201,14 @@ returns the estimate together with its Monte Carlo standard error.
 - **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware measures.
 - **Diagnostics:** convergence traces, zip plots, performance plots, non-finite checks.
 
+## Citation
+
+To cite `mcstatsim` in publications, use:
+
+```{r citation}
+citation("mcstatsim")
+```
+
 ## Contributing
 
 Contributions are welcome. Please feel free to open an issue or submit a pull

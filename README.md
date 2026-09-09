@@ -228,6 +228,29 @@ returns the estimate together with its Monte Carlo standard error.
 - **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware measures.
 - **Diagnostics:** convergence traces, zip plots, performance plots, non-finite checks.
 
+## Citation
+
+To cite `mcstatsim` in publications, use:
+
+``` r
+citation("mcstatsim")
+#> To cite mcstatsim in publications, use:
+#> 
+#>   El Badisy I (2026). _mcstatsim: Monte Carlo Statistical Simulation
+#>   Tools Using a Functional Approach_. R package version 0.9.2,
+#>   <https://CRAN.R-project.org/package=mcstatsim>.
+#> 
+#> A BibTeX entry for LaTeX users is
+#> 
+#>   @Manual{,
+#>     title = {mcstatsim: Monte Carlo Statistical Simulation Tools Using a Functional Approach},
+#>     author = {Imad {El Badisy}},
+#>     year = {2026},
+#>     note = {R package version 0.9.2},
+#>     url = {https://CRAN.R-project.org/package=mcstatsim},
+#>   }
+```
+
 ## Contributing
 
 Contributions are welcome. Please feel free to open an issue or submit a pull
