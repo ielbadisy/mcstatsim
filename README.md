@@ -35,9 +35,9 @@ replication index `ID`.
 ## Installation
 
 ``` r
-install.packages("mcstatsim")            # released version
-# install.packages("devtools")
-devtools::install_github("ielbadisy/mcstatsim")  # development version
+install.packages("mcstatsim")                    # released version
+# install.packages("remotes")
+remotes::install_github("ielbadisy/mcstatsim")   # development version
 ```
 
 ## A complete example
@@ -209,16 +209,81 @@ identical(a$est, b$est)
 
 If a simulation function errors on some cells, `on_error = "warn"` (or
 `"omit"`) drops those jobs and records them in `attr(x, "errors")`, which
-`failure_summary()` aggregates per condition. A `save_path` makes a long run
-resumable: it is checkpointed after each chunk of replications and re-running
-`runsim()` with the same `save_path` picks up where it stopped.
+`failure_summary()` aggregates per condition. Warnings raised inside the
+simulation function are kept in `attr(x, "warnings")`.
+
+``` r
+fragile <- function(n, dist) {
+  if (dist == "lognormal" && n == 10 && runif(1) < 0.1) stop("fit did not converge")
+  sim_mean_ci(n, dist)
+}
+r <- runsim(200, grid, fragile, seed = 1, on_error = "omit",
+            num_cores = 1, show_progress = FALSE)
+nrow(r)
+#> [1] 1179
+failure_summary(r)
+#>    n      dist n_failed failure_rate        example_error
+#> 1 10 lognormal       21        0.105 fit did not converge
+```
+
+A `save_path` makes a long run resumable: the result is checkpointed after
+each chunk of `checkpoint_every` replications, and re-running `runsim()` with
+the same `save_path`, `n`, `grid_params` and `seed` loads the completed
+replications and runs only the rest. A resumed run reproduces an uninterrupted
+one exactly.
+
+``` r
+ckpt <- tempfile(fileext = ".rds")
+r1 <- runsim(200, grid, sim_mean_ci, seed = 1, save_path = ckpt,
+             checkpoint_every = 50, num_cores = 1, show_progress = FALSE)
+identical(r1$est, a$est)
+#> [1] TRUE
+```
 
 ## Performance measures
 
 `calc_bias()`, `calc_variance()`, `calc_mse()`, `calc_rmse()`,
 `calc_coverage()`, `calc_width()`, `calc_rejection_rate()`,
 `calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()`. Each
-returns the estimate together with its Monte Carlo standard error.
+returns the estimate together with its Monte Carlo standard error, rounded to
+`digits` (default 4; `NULL` for full precision). They can be used on their own
+or inside `summarise_sim()`.
+
+``` r
+est <- res$est[res$n == 30 & res$dist == "normal"]
+calc_bias(est, 0)
+#> $bias
+#> [1] 0.0016
+#> 
+#> $bias_mcse
+#> [1] 0.0042
+calc_rmse(est, 0, digits = NULL)
+#> $rmse
+#> [1] 0.1860117
+#> 
+#> $rmse_mcse
+#> [1] 0.003563415
+```
+
+## Lower-level helpers
+
+`mcpmap()` maps a function over equal-length named lists in parallel (via
+`functionals`), and `combine_df()` row-binds a list of lists of data frames,
+adding a source `ID`. `runsim()` covers most use cases; these are there for
+custom drivers.
+
+``` r
+mcpmap(list(a = 1:3, b = 4:6), function(a, b) a + b, num_cores = 1,
+       show_progress = FALSE)
+#> [[1]]
+#> [1] 5
+#> 
+#> [[2]]
+#> [1] 7
+#> 
+#> [[3]]
+#> [1] 9
+```
 
 ## Features
 
@@ -227,6 +292,17 @@ returns the estimate together with its Monte Carlo standard error.
 - **Robustness:** per-cell error/warning capture, checkpoint/resume for long runs.
 - **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware measures.
 - **Diagnostics:** convergence traces, zip plots, performance plots, non-finite checks.
+
+## Learn more
+
+The package vignette, “Monte Carlo simulation studies with mcstatsim” (PDF),
+walks through `runsim()`, reproducible RNG, error handling, checkpoint/resume,
+`summarise_sim()`, the `calc_*` measures, diagnostics and plots, with a worked
+case study:
+
+``` r
+vignette("mcstatsim", package = "mcstatsim")
+```
 
 ## Citation
 
