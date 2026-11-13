@@ -29,10 +29,12 @@
 #'   session (via [parallel::mclapply()]; not available on Windows). `"psock"` starts a
 #'   fresh socket cluster ([parallel::makePSOCKcluster()]). `"auto"` (default) uses
 #'   `"fork"` on Unix-alikes and `"psock"` on Windows, and also switches to `"psock"` when
-#'   the RcppParallel namespace is loaded (for instance by rpsurv): a forked worker that
-#'   uses a TBB thread pool already started in the parent can hang. Use
-#'   `backend = "psock"` for other multithreaded native code (OpenMP) that hangs after a
-#'   fork. Ignored when `num_cores <= 1`.
+#'   the RcppParallel namespace is loaded (for instance by rpsurv), or, on Linux, when the
+#'   session already runs an OpenMP or threaded BLAS thread pool (libgomp, MKL, OpenBLAS,
+#'   TBB; typically started by earlier matrix algebra in a long script): a forked worker
+#'   that uses a thread pool already started in the parent hangs with idle workers. Use
+#'   `backend = "psock"` for other multithreaded native code that hangs after a fork.
+#'   Ignored when `num_cores <= 1`.
 #' @return A combined dataframe of all simulation results. Every `grid_params` column that
 #'   `sim_func` did not itself return is prepended, so each row identifies its own
 #'   condition, and an `ID` column gives the replication index (1 to `n`). When `seed` is
@@ -62,6 +64,8 @@
 #'
 #' Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
 #' process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
+#' A worker process that crashes or is killed is reported as a failed job (message
+#' "worker process died or did not return a result") rather than silently lost.
 #'
 #' When `save_path` is set the replications are run in chunks of `checkpoint_every` and the
 #' checkpoint file is rewritten after each chunk. Per-job RNG streams are keyed by position, so a
@@ -194,9 +198,10 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
       out <- parallel::parLapplyLB(cl, items, .runsim_item_runner(run_one), chunk.size = 1L)
     }
     if (is.null(out) || length(out) != length(job_idx)) {
-      stop("Failed to obtain simulation results for every job.")
+      stop("Failed to obtain simulation results for every job ",
+           "(a worker process probably crashed).")
     }
-    out
+    .runsim_check_envelopes(out)
   }
 
   # per-job envelopes for the whole run, filled in as chunks complete
@@ -319,13 +324,52 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
 # started can deadlock the workers.
 .runsim_resolve_backend <- function(backend, num_cores,
                                     os_type = .Platform$OS.type,
-                                    loaded = loadedNamespaces()) {
+                                    loaded = loadedNamespaces(),
+                                    threaded = .runsim_threaded_runtime()) {
   if (!isTRUE(num_cores > 1)) return("sequential")
   if (backend == "fork" && os_type == "windows") {
     stop("backend = \"fork\" is not available on Windows; use \"psock\" or \"auto\".")
   }
   if (backend != "auto") return(backend)
-  if (os_type == "windows" || "RcppParallel" %in% loaded) "psock" else "fork"
+  if (os_type == "windows" || "RcppParallel" %in% loaded || isTRUE(threaded)) "psock" else "fork"
+}
+
+# TRUE when the session already runs extra threads and has an OpenMP or
+# threaded BLAS runtime mapped (libgomp, libiomp, libomp, MKL, OpenBLAS, TBB).
+# Such a thread pool, once started (for instance by a matrix product with MKL
+# or OpenBLAS earlier in a long script), does not survive fork(): the forked
+# workers block on a futex and the run hangs with idle workers. Only Linux
+# exposes this through /proc; elsewhere FALSE.
+.runsim_threaded_runtime <- function(proc = "/proc/self") {
+  status <- file.path(proc, "status")
+  maps <- file.path(proc, "maps")
+  if (!file.exists(status) || !file.exists(maps)) return(FALSE)
+  res <- tryCatch({
+    st <- readLines(status, warn = FALSE)
+    th <- suppressWarnings(as.integer(sub("^Threads:\\s*", "", grep("^Threads:", st, value = TRUE))))
+    if (!length(th) || is.na(th[1]) || th[1] <= 1L) {
+      FALSE
+    } else {
+      libs <- readLines(maps, warn = FALSE)
+      any(grepl("lib(gomp|iomp5|omp)[.]so|libmkl_|libopenblas|libtbb", libs))
+    }
+  }, error = function(e) FALSE)
+  isTRUE(res)
+}
+
+# A worker that crashed or was killed returns NULL or a "try-error" instead of
+# the job envelope; turn that into a failed job so it is reported, not lost.
+.runsim_check_envelopes <- function(out) {
+  lapply(out, function(o) {
+    if (is.list(o) && !inherits(o, "try-error") && "value" %in% names(o)) return(o)
+    msg <- if (inherits(o, "try-error")) {
+      paste("worker process error:", trimws(as.character(o)[1]))
+    } else {
+      "worker process died or did not return a result"
+    }
+    list(value = structure(list(message = msg), class = "runsim_failed_job"),
+         warnings = character())
+  })
 }
 
 # Names of global-environment objects that `f` uses, following global functions.

@@ -54,10 +54,12 @@ lost work if the run is interrupted. Ignored when `save_path` is `NULL`.}
 session (via [parallel::mclapply()]; not available on Windows). `"psock"` starts a
 fresh socket cluster ([parallel::makePSOCKcluster()]). `"auto"` (default) uses
 `"fork"` on Unix-alikes and `"psock"` on Windows, and also switches to `"psock"` when
-the RcppParallel namespace is loaded (for instance by rpsurv): a forked worker that
-uses a TBB thread pool already started in the parent can hang. Use
-`backend = "psock"` for other multithreaded native code (OpenMP) that hangs after a
-fork. Ignored when `num_cores <= 1`.}
+the RcppParallel namespace is loaded (for instance by rpsurv), or, on Linux, when the
+session already runs an OpenMP or threaded BLAS thread pool (libgomp, MKL, OpenBLAS,
+TBB; typically started by earlier matrix algebra in a long script): a forked worker
+that uses a thread pool already started in the parent hangs with idle workers. Use
+`backend = "psock"` for other multithreaded native code that hangs after a fork.
+Ignored when `num_cores <= 1`.}
 }
 \value{
 A combined dataframe of all simulation results. Every `grid_params` column that
@@ -94,6 +96,8 @@ and core counts.
 
 Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
 process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
+A worker process that crashes or is killed is reported as a failed job (message
+"worker process died or did not return a result") rather than silently lost.
 
 When `save_path` is set the replications are run in chunks of `checkpoint_every` and the
 checkpoint file is rewritten after each chunk. Per-job RNG streams are keyed by position, so a

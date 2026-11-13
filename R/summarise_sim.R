@@ -50,8 +50,9 @@
 #'   )
 #' )
 #' @param digits Number of decimal places to round the performance-measure columns to
-#'   (the `by` columns and `n_sim` are left alone); `NULL` returns them unrounded.
-#'   Default 4. Note that measures built from the `calc*` functions are already rounded
+#'   (the `by` columns and `n_sim` are left alone); values smaller than 1 in absolute
+#'   value keep `digits` significant digits instead, so tiny quantities (a width of
+#'   2e-5, say) are not rounded to 0. `NULL` returns them unrounded. Default 4. Note that measures built from the `calc*` functions are already rounded
 #'   to those functions' own `digits` (also 4 by default); pass `digits = NULL` inside
 #'   such a measure, e.g. `~ calcbias(est, true_val[1], digits = NULL)`, if you need
 #'   more precision than that.
@@ -102,7 +103,9 @@ summarisesim <- function(data, by = NULL, measures, digits = 4) {
     key_tab <- NULL
   } else {
     key_tab <- unique(data[, by, drop = FALSE])
-    key_tab <- key_tab[do.call(order, as.list(key_tab)), , drop = FALSE]
+    # unname: a column called `method`, `decreasing` or `na.last` must not be
+    # matched to an argument of order()
+    key_tab <- key_tab[do.call(order, unname(as.list(key_tab))), , drop = FALSE]
     rownames(key_tab) <- NULL
     group_rows <- lapply(seq_len(nrow(key_tab)), function(i) {
       keep <- rep(TRUE, nrow(data))
@@ -152,7 +155,7 @@ summarisesim <- function(data, by = NULL, measures, digits = 4) {
     if (!is.numeric(digits) || length(digits) != 1 || is.na(digits)) {
       stop("'digits' must be a single number or NULL.")
     }
-    measure_mat <- round(measure_mat, digits)
+    measure_mat[] <- .mcstatsim_round(as.vector(measure_mat), digits)
   }
   out <- data.frame(measure_mat, stringsAsFactors = FALSE)
   names(out) <- col_names

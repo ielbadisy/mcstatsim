@@ -8,7 +8,7 @@
 #'
 #' @param estimates A numeric vector of estimates from the simulation or sampling process.
 #' @param true_param The true parameter value that the estimates are intended to approximate.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `bias`, the calculated bias of the estimates, and `bias_mcse`,
 #' the Monte Carlo Standard Error of the bias, indicating the uncertainty associated with the bias estimate.
 #' @examples
@@ -34,7 +34,7 @@ calcbias <- function(estimates, true_param, digits = 4) {
 #' is crucial.
 #'
 #' @param estimates A numeric vector of estimates from a simulation or sampling process.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list containing two elements: `variance`, the calculated sample variance of the estimates,
 #' and `variance_mcse`, the Monte Carlo Standard Error of the variance. The MCSE provides a measure of
 #' the uncertainty associated with the variance estimate, adjusted for kurtosis.
@@ -62,7 +62,7 @@ calcvariance <- function(estimates, digits = 4) {
 #'
 #' @param estimates A numeric vector of estimates from a simulation or sampling process.
 #' @param true_param The true parameter value that the estimates are intended to approximate.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `mse`, the calculated Mean Squared Error of the estimates,
 #' and `mse_mcse`, the Monte Carlo Standard Error of the MSE, offering insight into the reliability
 #' of the MSE calculation.
@@ -94,7 +94,7 @@ calcmse <- function(estimates, true_param, digits = 4) {
 #'
 #' @param estimates A numeric vector of estimates from a simulation or sampling process.
 #' @param true_param The true parameter value that the estimates are intended to approximate.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `rmse`, the calculated Root Mean Squared Error of the estimates,
 #' and `rmse_mcse`, the Monte Carlo Standard Error of the RMSE. This MCSE is derived from jackknife
 #' estimates, offering insight into the reliability of the RMSE calculation.
@@ -133,7 +133,7 @@ calcrmse <- function(estimates, true_param, digits = 4) {
 #' @param lower_bound A numeric vector of lower bounds of confidence intervals.
 #' @param upper_bound A numeric vector of upper bounds of confidence intervals, corresponding to `lower_bound`.
 #' @param true_param The true parameter value that the confidence intervals are intended to estimate.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `coverage`, the calculated coverage probability of the confidence intervals,
 #' and `coverage_mcse`, the Monte Carlo Standard Error of the coverage. This MCSE provides a measure of the precision
 #' of the coverage probability estimate.
@@ -166,7 +166,7 @@ calccoverage <- function(lower_bound, upper_bound, true_param, digits = 4) {
 #'
 #' @param lower_bound A numeric vector of lower bounds of confidence intervals.
 #' @param upper_bound A numeric vector of upper bounds of confidence intervals, corresponding to `lower_bound`.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `width`, the average width of the confidence intervals, and
 #' `width_mcse`, the Monte Carlo Standard Error of the average width. This MCSE provides a quantification
 #' of the uncertainty in the average width estimate.
@@ -198,7 +198,7 @@ calcwidth <- function(lower_bound, upper_bound, digits = 4) {
 #' @param p_values A numeric vector of p-values from multiple hypothesis tests.
 #' @param alpha The significance level used to determine if a p-value indicates a significant result.
 #' Default is 0.05.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `rejection_rate`, the proportion of tests that resulted in
 #' rejection of the null hypothesis, and `rejection_rate_mcse`, the Monte Carlo Standard Error of the
 #' rejection rate, providing an estimate of its variability.
@@ -230,7 +230,7 @@ calcrejectionrate <- function(p_values, alpha = 0.05, digits = 4) {
 #' @param true_param The true parameter value that the estimates are intended to approximate.
 #' Note that `true_param` must not be zero, as relative bias calculation involves division by
 #' the true parameter value.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `rel_bias`, the calculated relative bias of the estimates, and
 #' `rel_bias_mcse`, the Monte Carlo Standard Error of the relative bias. If `true_param` is zero,
 #' both `rel_bias` and `rel_bias_mcse` will be `NA`.
@@ -264,7 +264,7 @@ calcrelativebias <- function(estimates, true_param, digits = 4) {
 #' @param estimates A numeric vector of estimates from a simulation or sampling process.
 #' @param true_param The true parameter value that the estimates are intended to approximate.
 #' Note that `true_param` must not be zero, as the calculation involves division by the true parameter value.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `rel_mse`, the calculated Relative Mean Squared Error of the estimates,
 #' and `rel_mse_mcse`, the Monte Carlo Standard Error of the Relative MSE. If `true_param` is zero,
 #' both `rel_mse` and `rel_mse_mcse` will be `NA`.
@@ -303,7 +303,7 @@ calcrelativemse <- function(estimates, true_param, digits = 4) {
 #' @param estimates A numeric vector of estimates from a simulation or sampling process.
 #' @param true_param The true parameter value that the estimates are intended to approximate.
 #' Note that `true_param` must not be zero, as the calculation involves division by the true parameter value.
-#' @param digits Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
 #' @return A list with two components: `rel_rmse`, the calculated Relative Root Mean Squared Error of the
 #' estimates, and `rel_rmse_mcse`, the Monte Carlo Standard Error of the Relative RMSE, obtained from the
 #' MCSE of the Relative MSE by the delta method (`rel_mse_mcse / (2 * rel_rmse)`). Both are `NA` when

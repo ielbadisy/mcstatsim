@@ -12,7 +12,7 @@ calcrelativemse(estimates, true_param, digits = 4)
 \item{true_param}{The true parameter value that the estimates are intended to approximate.
 Note that `true_param` must not be zero, as the calculation involves division by the true parameter value.}
 
-\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
+\item{digits}{Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `rel_mse`, the calculated Relative Mean Squared Error of the estimates,

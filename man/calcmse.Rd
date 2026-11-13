@@ -11,7 +11,7 @@ calcmse(estimates, true_param, digits = 4)
 
 \item{true_param}{The true parameter value that the estimates are intended to approximate.}
 
-\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
+\item{digits}{Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `mse`, the calculated Mean Squared Error of the estimates,

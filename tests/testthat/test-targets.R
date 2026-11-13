@@ -31,9 +31,10 @@ test_that("calc* round to `digits` by default and honour digits = NULL", {
   b_raw <- calcbias(est, 2, digits = NULL)
   b_2 <- calcbias(est, 2, digits = 2)
 
-  expect_equal(b_default$bias, round(b_raw$bias, 4))
-  expect_equal(b_default$bias_mcse, round(b_raw$bias_mcse, 4))
-  expect_equal(b_2$bias, round(b_raw$bias, 2))
+  # values below 1 in absolute value keep `digits` significant digits
+  expect_equal(b_default$bias, signif(b_raw$bias, 4))
+  expect_equal(b_default$bias_mcse, signif(b_raw$bias_mcse, 4))
+  expect_equal(b_2$bias, signif(b_raw$bias, 2))
   expect_false(identical(b_default$bias, b_raw$bias))  # rounding actually happened
   expect_error(calcbias(est, 2, digits = "x"), "single number or NULL")
 })

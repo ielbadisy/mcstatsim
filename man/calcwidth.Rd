@@ -11,7 +11,7 @@ calcwidth(lower_bound, upper_bound, digits = 4)
 
 \item{upper_bound}{A numeric vector of upper bounds of confidence intervals, corresponding to `lower_bound`.}
 
-\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
+\item{digits}{Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `width`, the average width of the confidence intervals, and

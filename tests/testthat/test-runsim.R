@@ -176,7 +176,9 @@ test_that("runsim captures sim_func warnings without failing", {
 test_that("auto backend avoids fork when RcppParallel is loaded or on Windows", {
   r <- mcstatsim:::.runsim_resolve_backend
   expect_identical(r("auto", 1, "unix", "base"), "sequential")
-  expect_identical(r("auto", 2, "unix", c("base", "stats")), "fork")
+  expect_identical(r("auto", 2, "unix", c("base", "stats"), threaded = FALSE), "fork")
+  expect_identical(r("auto", 2, "unix", c("base", "stats"), threaded = TRUE), "psock")
+  expect_identical(r("fork", 2, "unix", "base", threaded = TRUE), "fork")
   expect_identical(r("auto", 2, "unix", c("base", "RcppParallel")), "psock")
   expect_identical(r("auto", 2, "windows", "base"), "psock")
   expect_identical(r("fork", 2, "unix", "RcppParallel"), "fork")
@@ -211,4 +213,51 @@ test_that("psock backend gives the same seeded results as fork and sequential", 
                 backend = "psock", on_error = "omit")
   expect_equal(nrow(out), 2L)
   expect_match(attr(out, "errors")$error, "boom")
+})
+
+test_that(".runsim_threaded_runtime reads thread count and mapped runtimes", {
+  fake <- function(threads, libs) {
+    d <- tempfile("proc")
+    dir.create(d)
+    writeLines(c("Name:\tR", paste0("Threads:\t", threads)), file.path(d, "status"))
+    writeLines(paste("7f00-7f01 r-xp 00000000 00:00 0 /usr/lib/", libs), file.path(d, "maps"))
+    d
+  }
+  f <- mcstatsim:::.runsim_threaded_runtime
+  expect_true(f(fake(8, "libgomp.so.1.0.0")))
+  expect_true(f(fake(3, "libopenblasp-r0.3.so")))
+  expect_false(f(fake(1, "libgomp.so.1.0.0")))
+  expect_false(f(fake(4, "libR.so")))
+  expect_false(f(file.path(tempdir(), "no-such-proc")))
+})
+
+test_that("an error inside a parallel worker surfaces as an R error with its message", {
+  skip_on_cran()
+  params <- data.frame(a = 1:3)
+  f <- function(a) {
+    if (a == 2) stop("boom in worker")
+    data.frame(x = a)
+  }
+  backends <- if (.Platform$OS.type == "windows") "psock" else c("fork", "psock")
+  for (b in backends) {
+    expect_error(
+      runsim(3, params, f, show_progress = FALSE, num_cores = 2, seed = 1, backend = b),
+      "errored on 3 of 9 job\\(s\\).*boom in worker"
+    )
+  }
+})
+
+test_that("a fork worker that dies is reported instead of lost", {
+  skip_on_cran()
+  skip_on_os("windows")
+  params <- data.frame(a = 1:3)
+  f <- function(a) {
+    if (a == 2) tools::pskill(Sys.getpid(), tools::SIGKILL)
+    data.frame(x = a)
+  }
+  expect_error(
+    suppressWarnings(runsim(2, params, f, show_progress = FALSE, num_cores = 2,
+                            seed = 1, backend = "fork")),
+    "worker process died"
+  )
 })
