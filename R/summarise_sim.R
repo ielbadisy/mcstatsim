@@ -3,7 +3,7 @@
 #' Collapses the raw, replicate-level dataframe returned by [runsim()] into one row per
 #' simulation condition, evaluating one or more performance measures (bias, coverage,
 #' rejection rate, ...) per condition. This is the bridge between `runsim()` output and
-#' the `calc_*` functions in this package.
+#' the `calc*` functions in this package.
 #'
 #' @param data A dataframe of replicate-level results, typically from [runsim()]: one row
 #'   per replication (per condition), with the condition columns, the quantities returned
@@ -15,16 +15,16 @@
 #'   is either
 #'   \itemize{
 #'     \item a one-sided formula whose right-hand side is evaluated with the group's
-#'       columns in scope, e.g. `~ calc_bias(est, true_val[1])`; or
+#'       columns in scope, e.g. `~ calcbias(est, true_val[1])`; or
 #'     \item a function taking the group dataframe and returning a named numeric vector or
-#'       a list of scalars, e.g. `function(d) calc_coverage(d$lo, d$hi, d$true_val[1])`.
+#'       a list of scalars, e.g. `function(d) calccoverage(d$lo, d$hi, d$true_val[1])`.
 #'   }
 #'   Columns hold one value per replicate, so a quantity that is constant across a
 #'   condition (a true parameter value) must be indexed, e.g. `true_val[1]`.
 #'   The element names are labels only. A measure that returns a length-one value becomes a
 #'   column named after the measure; a measure that returns a named vector of length > 1
-#'   (as the `calc_*` functions do) contributes one column per name. When two or more
-#'   measures produce the same column name (for instance two `calc_bias()` measures, both
+#'   (as the `calc*` functions do) contributes one column per name. When two or more
+#'   measures produce the same column name (for instance two `calcbias()` measures, both
 #'   returning `bias` and `bias_mcse`), every column of those measures is prefixed with the
 #'   measure name and an underscore (`a_bias`, `a_bias_mcse`, `b_bias`, ...); the columns
 #'   of the other measures keep their names.
@@ -41,22 +41,22 @@
 #' grid <- expand.grid(mu = c(0, 1), n_obs = c(20, 50))
 #' res <- runsim(100, grid, sim_func, show_progress = FALSE, num_cores = 1, seed = 1)
 #'
-#' summarise_sim(
+#' summarisesim(
 #'   res,
 #'   by = c("mu", "n_obs"),
 #'   measures = list(
-#'     bias     = ~ calc_bias(est, true_val[1]),
-#'     coverage = ~ calc_coverage(lo, hi, true_val[1])
+#'     bias     = ~ calcbias(est, true_val[1]),
+#'     coverage = ~ calccoverage(lo, hi, true_val[1])
 #'   )
 #' )
 #' @param digits Number of decimal places to round the performance-measure columns to
 #'   (the `by` columns and `n_sim` are left alone); `NULL` returns them unrounded.
-#'   Default 4. Note that measures built from the `calc_*` functions are already rounded
+#'   Default 4. Note that measures built from the `calc*` functions are already rounded
 #'   to those functions' own `digits` (also 4 by default); pass `digits = NULL` inside
-#'   such a measure, e.g. `~ calc_bias(est, true_val[1], digits = NULL)`, if you need
+#'   such a measure, e.g. `~ calcbias(est, true_val[1], digits = NULL)`, if you need
 #'   more precision than that.
 #' @export
-summarise_sim <- function(data, by = NULL, measures, digits = 4) {
+summarisesim <- function(data, by = NULL, measures, digits = 4) {
   if (!is.data.frame(data)) {
     stop("'data' must be a dataframe, typically the output of runsim().")
   }
@@ -86,7 +86,7 @@ summarise_sim <- function(data, by = NULL, measures, digits = 4) {
       stop("measure '", lab, "' returned non-scalar element(s); each performance ",
            "measure must reduce a condition's replicates to scalar(s). ",
            "If you passed a constant column as the true value, index it, ",
-           "e.g. calc_bias(est, true_val[1]).")
+           "e.g. calcbias(est, true_val[1]).")
     }
     out <- unlist(out, use.names = TRUE)
     if (!is.numeric(out) || length(out) == 0L) {

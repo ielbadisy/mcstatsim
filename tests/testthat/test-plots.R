@@ -15,10 +15,10 @@ make_res <- function(n = 120) {
   runsim(n, grid, sim_func, show_progress = FALSE, num_cores = 1, seed = 1)
 }
 
-test_that("plot_convergence returns a ggplot with running mean and MCSE band", {
+test_that("plotconvergence returns a ggplot with running mean and MCSE band", {
   skip_if_no_ggplot2()
   res <- make_res()
-  p <- plot_convergence(res, "est", by = c("mu", "n_obs"))
+  p <- plotconvergence(res, "est", by = c("mu", "n_obs"))
   expect_s3_class(p, "ggplot")
   d <- p$data
   expect_true(all(c("condition", "replication", "estimate", "lo", "hi") %in% names(d)))
@@ -30,17 +30,17 @@ test_that("plot_convergence returns a ggplot with running mean and MCSE band", {
   expect_equal(tail(last$estimate, 1), mean(sub$est))
 })
 
-test_that("plot_convergence validates its inputs", {
+test_that("plotconvergence validates its inputs", {
   skip_if_no_ggplot2()
   res <- make_res()
-  expect_error(plot_convergence(res, "nope"), "single column")
-  expect_error(plot_convergence(res, "est", by = "missing"), "not found")
+  expect_error(plotconvergence(res, "nope"), "single column")
+  expect_error(plotconvergence(res, "est", by = "missing"), "not found")
 })
 
-test_that("plot_zip returns a ggplot and classifies coverage", {
+test_that("plotzip returns a ggplot and classifies coverage", {
   skip_if_no_ggplot2()
   res <- make_res()
-  p <- plot_zip(res, "lo", "hi", "true_val", by = "n_obs")
+  p <- plotzip(res, "lo", "hi", "true_val", by = "n_obs")
   expect_s3_class(p, "ggplot")
   d <- p$data
   expect_true(all(c("centile", "lo", "hi", "covers") %in% names(d)))
@@ -48,30 +48,30 @@ test_that("plot_zip returns a ggplot and classifies coverage", {
   expect_true(all(d$centile >= 0 & d$centile <= 100))
 })
 
-test_that("plot_zip validates conf_level and columns", {
+test_that("plotzip validates conf_level and columns", {
   skip_if_no_ggplot2()
   res <- make_res()
-  expect_error(plot_zip(res, "lo", "hi", "true_val", conf_level = 1.2), "in \\(0, 1\\)")
-  expect_error(plot_zip(res, "lo", "hi", "absent"), "name a single column")
+  expect_error(plotzip(res, "lo", "hi", "true_val", conf_level = 1.2), "in \\(0, 1\\)")
+  expect_error(plotzip(res, "lo", "hi", "absent"), "name a single column")
 })
 
-test_that("plot_performance draws a point-range from a summarise_sim table", {
+test_that("plotperformance draws a point-range from a summarisesim table", {
   skip_if_no_ggplot2()
   res <- make_res()
-  tab <- summarise_sim(
+  tab <- summarisesim(
     res, by = c("mu", "n_obs"),
-    measures = list(coverage = ~ calc_coverage(lo, hi, true_val[1]))
+    measures = list(coverage = ~ calccoverage(lo, hi, true_val[1]))
   )
-  p <- plot_performance(tab, "coverage", x = "n_obs", colour = "mu", ref = 0.95)
+  p <- plotperformance(tab, "coverage", x = "n_obs", colour = "mu", ref = 0.95)
   expect_s3_class(p, "ggplot")
   expect_true(".lo" %in% names(p$data) && ".hi" %in% names(p$data))
   expect_true(any(vapply(p$layers, function(l) inherits(l$geom, "GeomPointrange"), logical(1))))
 })
 
-test_that("plot_performance errors on missing columns", {
+test_that("plotperformance errors on missing columns", {
   skip_if_no_ggplot2()
   res <- make_res()
-  tab <- summarise_sim(res, by = "n_obs",
-                       measures = list(bias = ~ calc_bias(est, true_val[1])))
-  expect_error(plot_performance(tab, "coverage", x = "n_obs"), "not found in 'summary'")
+  tab <- summarisesim(res, by = "n_obs",
+                       measures = list(bias = ~ calcbias(est, true_val[1])))
+  expect_error(plotperformance(tab, "coverage", x = "n_obs"), "not found in 'summary'")
 })

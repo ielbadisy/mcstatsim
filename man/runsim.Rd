@@ -65,7 +65,7 @@ A combined dataframe of all simulation results. Every `grid_params` column that
   condition, and an `ID` column gives the replication index (1 to `n`). When `seed` is
   supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are
   collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs
-  are described in `attr(x, "errors")` (see [failure_summary()]).
+  are described in `attr(x, "errors")` (see [failuresummary()]).
 }
 \description{
 This function executes a series of Monte Carlo simulations in parallel, providing detailed progress updates.

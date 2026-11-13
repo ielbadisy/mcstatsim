@@ -108,13 +108,13 @@ nrow(res)
 ### 3. Turn replicates into a performance table
 
 ``` r
-perf <- summarise_sim(
+perf <- summarisesim(
   res,
   by = c("n", "dist"),
   measures = list(
-    bias     = ~ calc_bias(est, true_val[1]),
-    coverage = ~ calc_coverage(lo, hi, true_val[1]),
-    width    = ~ calc_width(lo, hi)
+    bias     = ~ calcbias(est, true_val[1]),
+    coverage = ~ calccoverage(lo, hi, true_val[1]),
+    width    = ~ calcwidth(lo, hi)
   )
 )
 perf
@@ -134,16 +134,16 @@ perf
 #> 6     0.0006
 ```
 
-Each `calc_*` measure contributes its estimate and its Monte Carlo standard
+Each `calc*` measure contributes its estimate and its Monte Carlo standard
 error (the `*_mcse` columns). Numeric columns are rounded to `digits` (default
-4); pass `digits = NULL` to `summarise_sim()` for full precision.
+4); pass `digits = NULL` to `summarisesim()` for full precision.
 
 ### 4. Diagnostics
 
 Check that no replicate produced a non-finite estimate:
 
 ``` r
-check_estimates(res, by = c("n", "dist"))
+checkestimates(res, by = c("n", "dist"))
 #> [1] n        dist     column   n_bad    n_total  prop_bad
 #> <0 rows> (or 0-length row.names)
 ```
@@ -153,7 +153,7 @@ How many replications would we need to pin the coverage MCSE down to 0.0025?
 ``` r
 data.frame(perf[c("n", "dist")],
            coverage_mcse = round(perf$coverage_mcse, 4),
-           reps_for_0.0025 = mcse_target(perf$coverage_mcse, perf$n_sim, target = 0.0025))
+           reps_for_0.0025 = mcsetarget(perf$coverage_mcse, perf$n_sim, target = 0.0025))
 #>     n      dist coverage_mcse reps_for_0.0025
 #> 1  10 lognormal        0.0083           22045
 #> 2  10    normal        0.0048            7373
@@ -169,7 +169,7 @@ data.frame(perf[c("n", "dist")],
 Monte Carlo standard-error band, one panel per condition:
 
 ``` r
-plot_convergence(res, "est", by = c("n", "dist"))
+plotconvergence(res, "est", by = c("n", "dist"))
 ```
 
 ![](man/figures/plot-convergence-1.png)<!-- -->
@@ -180,7 +180,7 @@ well-calibrated interval fills the panel up to the nominal line in the
 “covers” colour. Shown here for `n = 10`:
 
 ``` r
-plot_zip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
+plotzip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
 ```
 
 ![](man/figures/plot-zip-1.png)<!-- -->
@@ -189,7 +189,7 @@ plot_zip(res[res$n == 10, ], "lo", "hi", "true_val", by = "dist")
 the nominal 0.95 line:
 
 ``` r
-plot_performance(perf, "coverage", x = "n", colour = "dist", ref = 0.95)
+plotperformance(perf, "coverage", x = "n", colour = "dist", ref = 0.95)
 ```
 
 ![](man/figures/plot-performance-1.png)<!-- -->
@@ -209,7 +209,7 @@ identical(a$est, b$est)
 
 If a simulation function errors on some cells, `on_error = "warn"` (or
 `"omit"`) drops those jobs and records them in `attr(x, "errors")`, which
-`failure_summary()` aggregates per condition. Warnings raised inside the
+`failuresummary()` aggregates per condition. Warnings raised inside the
 simulation function are kept in `attr(x, "warnings")`.
 
 ``` r
@@ -221,7 +221,7 @@ r <- runsim(200, grid, fragile, seed = 1, on_error = "omit",
             num_cores = 1, show_progress = FALSE)
 nrow(r)
 #> [1] 1179
-failure_summary(r)
+failuresummary(r)
 #>    n      dist n_failed failure_rate        example_error
 #> 1 10 lognormal       21        0.105 fit did not converge
 ```
@@ -242,22 +242,22 @@ identical(r1$est, a$est)
 
 ## Performance measures
 
-`calc_bias()`, `calc_variance()`, `calc_mse()`, `calc_rmse()`,
-`calc_coverage()`, `calc_width()`, `calc_rejection_rate()`,
-`calc_relative_bias()`, `calc_relative_mse()`, `calc_relative_rmse()`. Each
+`calcbias()`, `calcvariance()`, `calcmse()`, `calcrmse()`,
+`calccoverage()`, `calcwidth()`, `calcrejectionrate()`,
+`calcrelativebias()`, `calcrelativemse()`, `calcrelativermse()`. Each
 returns the estimate together with its Monte Carlo standard error, rounded to
 `digits` (default 4; `NULL` for full precision). They can be used on their own
-or inside `summarise_sim()`.
+or inside `summarisesim()`.
 
 ``` r
 est <- res$est[res$n == 30 & res$dist == "normal"]
-calc_bias(est, 0)
+calcbias(est, 0)
 #> $bias
 #> [1] 0.0016
 #> 
 #> $bias_mcse
 #> [1] 0.0042
-calc_rmse(est, 0, digits = NULL)
+calcrmse(est, 0, digits = NULL)
 #> $rmse
 #> [1] 0.1860117
 #> 
@@ -268,7 +268,7 @@ calc_rmse(est, 0, digits = NULL)
 ## Lower-level helpers
 
 `mcpmap()` maps a function over equal-length named lists in parallel (via
-`functionals`), and `combine_df()` row-binds a list of lists of data frames,
+`functionals`), and `combinedf()` row-binds a list of lists of data frames,
 adding a source `ID`. `runsim()` covers most use cases; these are there for
 custom drivers.
 
@@ -290,14 +290,14 @@ mcpmap(list(a = 1:3, b = 4:6), function(a, b) a + b, num_cores = 1,
 - **Higher-order, declarative interface:** write the simulation as a function; `runsim()` maps it over the design.
 - **Reproducible parallelism:** per-job RNG streams; results independent of core count.
 - **Robustness:** per-cell error/warning capture, checkpoint/resume for long runs.
-- **Evaluation layer:** `summarise_sim()` plus a full set of MCSE-aware measures.
+- **Evaluation layer:** `summarisesim()` plus a full set of MCSE-aware measures.
 - **Diagnostics:** convergence traces, zip plots, performance plots, non-finite checks.
 
 ## Learn more
 
 The package vignette, “Monte Carlo simulation studies with mcstatsim” (PDF),
 walks through `runsim()`, reproducible RNG, error handling, checkpoint/resume,
-`summarise_sim()`, the `calc_*` measures, diagnostics and plots, with a worked
+`summarisesim()`, the `calc*` measures, diagnostics and plots, with a worked
 case study:
 
 ``` r
@@ -313,7 +313,7 @@ citation("mcstatsim")
 #> To cite mcstatsim in publications, use:
 #> 
 #>   El Badisy I (2026). _mcstatsim: Monte Carlo Statistical Simulation
-#>   Tools Using a Functional Approach_. R package version 0.9.2,
+#>   Tools Using a Functional Approach_. R package version 0.9.4,
 #>   <https://CRAN.R-project.org/package=mcstatsim>.
 #> 
 #> A BibTeX entry for LaTeX users is
@@ -322,7 +322,7 @@ citation("mcstatsim")
 #>     title = {mcstatsim: Monte Carlo Statistical Simulation Tools Using a Functional Approach},
 #>     author = {Imad {El Badisy}},
 #>     year = {2026},
-#>     note = {R package version 0.9.2},
+#>     note = {R package version 0.9.4},
 #>     url = {https://CRAN.R-project.org/package=mcstatsim},
 #>   }
 ```
