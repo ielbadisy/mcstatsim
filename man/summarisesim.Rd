@@ -34,8 +34,9 @@ measure name and an underscore (`a_bias`, `a_bias_mcse`, `b_bias`, ...); the col
 of the other measures keep their names.}
 
 \item{digits}{Number of decimal places to round the performance-measure columns to
-(the `by` columns and `n_sim` are left alone); `NULL` returns them unrounded.
-Default 4. Note that measures built from the `calc*` functions are already rounded
+(the `by` columns and `n_sim` are left alone); values smaller than 1 in absolute
+value keep `digits` significant digits instead, so tiny quantities (a width of
+2e-5, say) are not rounded to 0. `NULL` returns them unrounded. Default 4. Note that measures built from the `calc*` functions are already rounded
 to those functions' own `digits` (also 4 by default); pass `digits = NULL` inside
 such a measure, e.g. `~ calcbias(est, true_val[1], digits = NULL)`, if you need
 more precision than that.}

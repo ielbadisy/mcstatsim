@@ -105,3 +105,33 @@ test_that("summarisesim rounds measure columns to digits (default 4), not the by
   expect_error(summarisesim(res, by = "n_obs", measures = meas, digits = "x"),
                "single number or NULL")
 })
+
+test_that("summarisesim works when a column is named like an order() argument", {
+  set.seed(1)
+  res <- data.frame(p = rep(c(1e-4, 2e-4), each = 20),
+                    method = rep(c("a", "b"), 20),
+                    decreasing = rep(c("x", "y"), each = 10, times = 2),
+                    lo = 0, hi = runif(40, 1e-5, 3e-5), ID = rep(1:10, 4))
+  s <- summarisesim(res, by = c("p", "method", "decreasing"),
+                    measures = list(w = ~ calcwidth(lo, hi)))
+  expect_equal(nrow(s), 8)
+  expect_identical(s$method, rep(c("a", "a", "b", "b"), 2))
+  expect_identical(s$decreasing, rep(c("x", "y"), 4))
+})
+
+test_that("default digits keep tiny measures instead of rounding them to 0", {
+  set.seed(2)
+  res <- data.frame(lo = 0, hi = runif(50, 1e-5, 3e-5), est = rnorm(50, 0, 1e-6))
+  s <- summarisesim(res, measures = list(w = ~ calcwidth(lo, hi),
+                                         b = ~ calcbias(est, 0),
+                                         m = function(d) mean(d$hi)))
+  expect_true(s$width > 1e-5 && s$width < 3e-5)
+  expect_equal(s$width, signif(mean(res$hi), 4))
+  expect_equal(s$m, signif(mean(res$hi), 4))
+  expect_true(s$bias != 0)
+  expect_equal(calcwidth(0, 2e-5)$width, 2e-5)
+  # values >= 1 are still rounded to decimal places
+  expect_equal(mcstatsim:::.mcstatsim_round(123.456789, 4), 123.4568)
+  expect_equal(mcstatsim:::.mcstatsim_round(c(0.123456, -0.0000123456, NA), 4),
+               c(0.1235, -0.00001235, NA))
+})

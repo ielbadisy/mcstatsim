@@ -13,7 +13,7 @@ calccoverage(lower_bound, upper_bound, true_param, digits = 4)
 
 \item{true_param}{The true parameter value that the confidence intervals are intended to estimate.}
 
-\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
+\item{digits}{Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `coverage`, the calculated coverage probability of the confidence intervals,

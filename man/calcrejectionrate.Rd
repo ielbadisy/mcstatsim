@@ -12,7 +12,7 @@ calcrejectionrate(p_values, alpha = 0.05, digits = 4)
 \item{alpha}{The significance level used to determine if a p-value indicates a significant result.
 Default is 0.05.}
 
-\item{digits}{Number of decimal places to round the returned values to; `NULL` returns them unrounded. Default 4.}
+\item{digits}{Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.}
 }
 \value{
 A list with two components: `rejection_rate`, the proportion of tests that resulted in
