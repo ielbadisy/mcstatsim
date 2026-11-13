@@ -25,6 +25,14 @@
 #' @param checkpoint_every Positive integer: how many replications to run between
 #'   checkpoint writes when `save_path` is set. Larger values mean less I/O but more
 #'   lost work if the run is interrupted. Ignored when `save_path` is `NULL`.
+#' @param backend How the jobs are run when `num_cores > 1`. `"fork"` forks the current
+#'   session (via [parallel::mclapply()]; not available on Windows). `"psock"` starts a
+#'   fresh socket cluster ([parallel::makePSOCKcluster()]). `"auto"` (default) uses
+#'   `"fork"` on Unix-alikes and `"psock"` on Windows, and also switches to `"psock"` when
+#'   the RcppParallel namespace is loaded (for instance by rpsurv): a forked worker that
+#'   uses a TBB thread pool already started in the parent can hang. Use
+#'   `backend = "psock"` for other multithreaded native code (OpenMP) that hangs after a
+#'   fork. Ignored when `num_cores <= 1`.
 #' @return A combined dataframe of all simulation results. Every `grid_params` column that
 #'   `sim_func` did not itself return is prepended, so each row identifies its own
 #'   condition, and an `ID` column gives the replication index (1 to `n`). When `seed` is
@@ -43,6 +51,14 @@
 #' (replication-major), a given `(replication, condition)` cell always draws from the same stream
 #' regardless of core count, so runs are bit-for-bit reproducible. Do not call `set.seed()` inside
 #' `sim_func` when using `seed`, as that would defeat the per-stream design.
+#'
+#' With the `"psock"` backend, each worker attaches the packages attached in the calling
+#' session and receives the objects of the global environment that `sim_func` refers to
+#' (found with [codetools::findGlobals()], following global helper functions), so a
+#' `sim_func` written for the fork backend usually runs unchanged. Objects that cannot be
+#' serialised (external pointers, connections) are not available to the workers. No
+#' progress bar is shown with this backend. Seeded results are identical across backends
+#' and core counts.
 #'
 #' Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
 #' process, and any warnings it emits are recorded. See `on_error` for how failures are handled.
@@ -71,9 +87,11 @@
 #' @importFrom utils object.size
 #' @export
 runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = parallel::detectCores() - 1, seed = NULL,
-                   on_error = c("stop", "warn", "omit"), save_path = NULL, checkpoint_every = 1L) {
+                   on_error = c("stop", "warn", "omit"), save_path = NULL, checkpoint_every = 1L,
+                   backend = c("auto", "fork", "psock")) {
 
   on_error <- match.arg(on_error)
+  backend <- match.arg(backend)
 
   # input validation
   if (!is.numeric(n) || length(n) != 1 || n <= 0 || n != as.integer(n)) {
@@ -110,9 +128,11 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   }
 
   n_jobs <- n * n_cond
+  backend <- .runsim_resolve_backend(backend, num_cores)
 
   if (show_progress) {
     cat("Using", num_cores, "core(s) for parallel simulations...\n")
+    if (backend == "psock") cat("Backend: PSOCK cluster (no progress bar)\n")
     cat("Date:", format(Sys.time(), "%Y-%m-%d"), "\n")
     cat(sprintf("Dispatching %d job(s): %d replication(s) x %d condition(s)\n", n_jobs, n, n_cond))
     cat("Starting simulations at", format(Sys.time(), "%X"), "\n")
@@ -156,31 +176,23 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
     }
   }
 
-  # each job returns an envelope so a worker-side error is carried back rather
-  # than lost, and warnings are captured before the backend can suppress them
-  run_one <- function(job, stream = NULL) {
-    if (!is.null(stream)) {
-      RNGkind("L'Ecuyer-CMRG")
-      assign(".Random.seed", stream, envir = globalenv())
-    }
-    warns <- character()
-    value <- withCallingHandlers(
-      tryCatch(
-        do.call(sim_func, job),
-        error = function(e) structure(list(message = conditionMessage(e)), class = "runsim_failed_job")
-      ),
-      warning = function(w) {
-        warns <<- c(warns, conditionMessage(w))
-        invokeRestart("muffleWarning")
-      }
-    )
-    list(value = value, warnings = warns)
+  run_one <- .runsim_job_runner(sim_func)
+
+  cl <- NULL
+  if (backend == "psock") {
+    cl <- .runsim_psock_cluster(num_cores, sim_func)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
   }
 
   dispatch <- function(job_idx) {
-    map_lists <- list(job = jobs[job_idx])
-    if (!is.null(streams)) map_lists$stream <- streams[job_idx]
-    out <- mcpmap(lists = map_lists, func = run_one, num_cores = num_cores, show_progress = show_progress)
+    if (is.null(cl)) {
+      map_lists <- list(job = jobs[job_idx])
+      if (!is.null(streams)) map_lists$stream <- streams[job_idx]
+      out <- mcpmap(lists = map_lists, func = run_one, num_cores = num_cores, show_progress = show_progress)
+    } else {
+      items <- lapply(job_idx, function(k) list(job = jobs[[k]], stream = streams[[k]]))
+      out <- parallel::parLapplyLB(cl, items, .runsim_item_runner(run_one), chunk.size = 1L)
+    }
     if (is.null(out) || length(out) != length(job_idx)) {
       stop("Failed to obtain simulation results for every job.")
     }
@@ -263,6 +275,101 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   return(combined_results)
 }
 
+
+# Each job returns an envelope so a worker-side error is carried back rather
+# than lost, and warnings are captured before the backend can suppress them.
+# The runner's enclosure holds only sim_func (parent baseenv()), so it is cheap
+# to serialise to PSOCK workers and does not need mcstatsim installed there.
+.runsim_job_runner <- function(sim_func) {
+  env <- new.env(parent = baseenv())
+  env$sim_func <- sim_func
+  f <- function(job, stream = NULL) {
+    if (!is.null(stream)) {
+      RNGkind("L'Ecuyer-CMRG")
+      assign(".Random.seed", stream, envir = globalenv())
+    }
+    warns <- character()
+    value <- withCallingHandlers(
+      tryCatch(
+        do.call(sim_func, job),
+        error = function(e) structure(list(message = conditionMessage(e)), class = "runsim_failed_job")
+      ),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    list(value = value, warnings = warns)
+  }
+  environment(f) <- env
+  f
+}
+
+# PSOCK form of the runner: one argument, list(job =, stream =).
+.runsim_item_runner <- function(run_one) {
+  env <- new.env(parent = baseenv())
+  env$run_one <- run_one
+  f <- function(item) run_one(item$job, item$stream)
+  environment(f) <- env
+  f
+}
+
+# Pick the parallel backend. "auto" avoids fork on Windows and when the
+# RcppParallel (TBB) runtime is loaded, since forking after its thread pool has
+# started can deadlock the workers.
+.runsim_resolve_backend <- function(backend, num_cores,
+                                    os_type = .Platform$OS.type,
+                                    loaded = loadedNamespaces()) {
+  if (!isTRUE(num_cores > 1)) return("sequential")
+  if (backend == "fork" && os_type == "windows") {
+    stop("backend = \"fork\" is not available on Windows; use \"psock\" or \"auto\".")
+  }
+  if (backend != "auto") return(backend)
+  if (os_type == "windows" || "RcppParallel" %in% loaded) "psock" else "fork"
+}
+
+# Names of global-environment objects that `f` uses, following global functions.
+.runsim_globals <- function(f, genv = globalenv()) {
+  found <- character()
+  todo <- list(f)
+  while (length(todo)) {
+    g <- todo[[1]]
+    todo <- todo[-1]
+    nms <- codetools::findGlobals(g)
+    nms <- nms[vapply(nms, exists, logical(1), envir = genv, inherits = FALSE)]
+    nms <- setdiff(nms, found)
+    found <- c(found, nms)
+    for (nm in nms) {
+      obj <- get(nm, envir = genv, inherits = FALSE)
+      if (is.function(obj) && identical(environment(obj), genv)) todo <- c(todo, list(obj))
+    }
+  }
+  found
+}
+
+# Start a PSOCK cluster whose workers mirror what sim_func needs from the
+# calling session: the attached packages and the global objects it refers to.
+.runsim_psock_cluster <- function(num_cores, sim_func) {
+  cl <- parallel::makePSOCKcluster(as.integer(num_cores))
+  ok <- FALSE
+  on.exit(if (!ok) parallel::stopCluster(cl), add = TRUE)
+
+  base_pkgs <- c("base", "stats", "graphics", "grDevices", "utils", "datasets", "methods")
+  attached <- sub("^package:", "", grep("^package:", search(), value = TRUE))
+  attached <- rev(setdiff(attached, base_pkgs))
+  if (length(attached)) {
+    parallel::clusterCall(cl, function(pkgs) {
+      for (p in pkgs) suppressPackageStartupMessages(library(p, character.only = TRUE))
+      NULL
+    }, attached)
+  }
+
+  globals <- .runsim_globals(sim_func)
+  if (length(globals)) parallel::clusterExport(cl, globals, envir = globalenv())
+
+  ok <- TRUE
+  cl
+}
 
 # Turn per-job envelopes into the combined result data frame, applying the
 # on_error policy and attaching the "errors"/"warnings"/"seed" attributes.

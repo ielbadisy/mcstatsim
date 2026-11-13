@@ -172,3 +172,43 @@ test_that("runsim captures sim_func warnings without failing", {
   expect_true(all(w$a == 1))
   expect_true(all(grepl("mild warning", w$warning)))
 })
+
+test_that("auto backend avoids fork when RcppParallel is loaded or on Windows", {
+  r <- mcstatsim:::.runsim_resolve_backend
+  expect_identical(r("auto", 1, "unix", "base"), "sequential")
+  expect_identical(r("auto", 2, "unix", c("base", "stats")), "fork")
+  expect_identical(r("auto", 2, "unix", c("base", "RcppParallel")), "psock")
+  expect_identical(r("auto", 2, "windows", "base"), "psock")
+  expect_identical(r("fork", 2, "unix", "RcppParallel"), "fork")
+  expect_error(r("fork", 2, "windows", "base"), "not available on Windows")
+})
+
+test_that("psock backend gives the same seeded results as fork and sequential", {
+  skip_on_cran()
+  skip_on_os("windows")
+  helper_scale <- 3
+  helper_draw <- function(n_obs) rnorm(n_obs) * helper_scale
+  assign("helper_scale", helper_scale, envir = globalenv())
+  assign("helper_draw", helper_draw, envir = globalenv())
+  on.exit(rm(list = c("helper_scale", "helper_draw"), envir = globalenv()), add = TRUE)
+  # sim_func defined in the global environment, using global helpers
+  sim <- eval(quote(function(n_obs) {
+    x <- helper_draw(n_obs)
+    if (n_obs == 10) warning("small n")
+    data.frame(est = mean(x), sdv = sd(x))
+  }), globalenv())
+  grid <- expand.grid(n_obs = c(10, 50))
+  seq_res <- runsim(6, grid, sim, show_progress = FALSE, num_cores = 1, seed = 42)
+  fork_res <- runsim(6, grid, sim, show_progress = FALSE, num_cores = 2, seed = 42, backend = "fork")
+  psock_res <- runsim(6, grid, sim, show_progress = FALSE, num_cores = 2, seed = 42, backend = "psock")
+  expect_identical(fork_res, seq_res)
+  expect_identical(psock_res, seq_res)
+  expect_equal(nrow(attr(psock_res, "warnings")), 6L)
+
+  # error capture works on psock workers too
+  bad <- function(n_obs) if (n_obs == 10) stop("boom") else data.frame(est = 1)
+  out <- runsim(2, grid, bad, show_progress = FALSE, num_cores = 2, seed = 1,
+                backend = "psock", on_error = "omit")
+  expect_equal(nrow(out), 2L)
+  expect_match(attr(out, "errors")$error, "boom")
+})
