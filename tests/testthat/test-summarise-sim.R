@@ -66,11 +66,27 @@ test_that("summarise_sim errors on unknown columns and bad measures", {
                "non-scalar")
 })
 
-test_that("summarise_sim flags colliding output columns", {
+test_that("summarise_sim prefixes colliding output columns with the measure name", {
   res <- make_res()
+  out <- summarise_sim(res, by = "mu",
+                       measures = list(a = ~ c(bias = mean(est)), b = ~ c(bias = median(est))))
+  expect_named(out, c("mu", "n_sim", "a_bias", "b_bias"))
+
+  # two calc_* measures returning the same names; a third, distinct measure is untouched
+  out2 <- summarise_sim(res, by = "mu",
+                        measures = list(m1 = ~ calc_bias(est, true_val[1]),
+                                        m2 = ~ calc_bias(lo, true_val[1]),
+                                        cov = ~ calc_coverage(lo, hi, true_val[1])))
+  expect_true(all(c("m1_bias", "m1_bias_mcse", "m2_bias", "m2_bias_mcse") %in% names(out2)))
+  expect_false(any(c("bias", "bias_mcse") %in% names(out2)))
+  expect_true(all(names(calc_coverage(0, 1, 0)) %in% names(out2)))
+  g <- res[res$mu == res$mu[1], ]
+  expect_equal(out2$m2_bias[1], calc_bias(g$lo, g$true_val[1])$bias)
+
+  # duplicated measure labels cannot be disambiguated
   expect_error(
     summarise_sim(res, by = "mu",
-                  measures = list(a = ~ c(bias = mean(est)), b = ~ c(bias = median(est)))),
+                  measures = list(a = ~ c(bias = mean(est)), a = ~ c(bias = median(est)))),
     "collide"
   )
 })

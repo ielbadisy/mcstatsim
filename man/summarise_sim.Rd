@@ -27,8 +27,11 @@ Columns hold one value per replicate, so a quantity that is constant across a
 condition (a true parameter value) must be indexed, e.g. `true_val[1]`.
 The element names are labels only. A measure that returns a length-one value becomes a
 column named after the measure; a measure that returns a named vector of length > 1
-(as the `calc_*` functions do) contributes one column per name. Column-name collisions
-across measures are an error.}
+(as the `calc_*` functions do) contributes one column per name. When two or more
+measures produce the same column name (for instance two `calc_bias()` measures, both
+returning `bias` and `bias_mcse`), every column of those measures is prefixed with the
+measure name and an underscore (`a_bias`, `a_bias_mcse`, `b_bias`, ...); the columns
+of the other measures keep their names.}
 
 \item{digits}{Number of decimal places to round the performance-measure columns to
 (the `by` columns and `n_sim` are left alone); `NULL` returns them unrounded.

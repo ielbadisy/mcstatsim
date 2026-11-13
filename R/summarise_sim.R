@@ -23,8 +23,11 @@
 #'   condition (a true parameter value) must be indexed, e.g. `true_val[1]`.
 #'   The element names are labels only. A measure that returns a length-one value becomes a
 #'   column named after the measure; a measure that returns a named vector of length > 1
-#'   (as the `calc_*` functions do) contributes one column per name. Column-name collisions
-#'   across measures are an error.
+#'   (as the `calc_*` functions do) contributes one column per name. When two or more
+#'   measures produce the same column name (for instance two `calc_bias()` measures, both
+#'   returning `bias` and `bias_mcse`), every column of those measures is prefixed with the
+#'   measure name and an underscore (`a_bias`, `a_bias_mcse`, `b_bias`, ...); the columns
+#'   of the other measures keep their names.
 #' @return A dataframe with one row per group: the `by` columns, then `n_sim` (the number of
 #'   distinct `ID` values in the group, or the row count if there is no `ID` column), then
 #'   one column per performance-measure output.
@@ -116,16 +119,28 @@ summarise_sim <- function(data, by = NULL, measures, digits = 4) {
       }
       v
     }, vals, names(measures))
-    do.call(c, unname(named))
+    named
   }
 
-  flats <- lapply(group_rows, function(idx) summarise_group(data[idx, , drop = FALSE]))
+  groups <- lapply(group_rows, function(idx) summarise_group(data[idx, , drop = FALSE]))
+
+  # measures whose output names collide with another measure's are prefixed
+  # with their label; the decision is taken once so every group gets the same columns
+  first_names <- lapply(groups[[1]], names)
+  all_names <- unlist(first_names, use.names = FALSE)
+  dup_names <- unique(all_names[duplicated(all_names)])
+  prefix <- vapply(first_names, function(nm) any(nm %in% dup_names), logical(1))
+  flats <- lapply(groups, function(g) {
+    g[prefix] <- Map(function(v, lab) { names(v) <- paste0(lab, "_", names(v)); v },
+                     g[prefix], names(measures)[prefix])
+    do.call(c, unname(g))
+  })
 
   col_names <- names(flats[[1]])
   if (anyDuplicated(col_names)) {
     stop("performance-measure output columns collide: ",
          paste(unique(col_names[duplicated(col_names)]), collapse = ", "),
-         ". Rename the returned elements so every column is unique.")
+         ". Give every measure a distinct name in 'measures'.")
   }
 
   n_sim <- vapply(group_rows, function(idx) {

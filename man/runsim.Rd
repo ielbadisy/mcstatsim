@@ -13,7 +13,8 @@ runsim(
   seed = NULL,
   on_error = c("stop", "warn", "omit"),
   save_path = NULL,
-  checkpoint_every = 1L
+  checkpoint_every = 1L,
+  backend = c("auto", "fork", "psock")
 )
 }
 \arguments{
@@ -48,6 +49,15 @@ calling `runsim()` again with the same `save_path` and matching `n` / `grid_para
 \item{checkpoint_every}{Positive integer: how many replications to run between
 checkpoint writes when `save_path` is set. Larger values mean less I/O but more
 lost work if the run is interrupted. Ignored when `save_path` is `NULL`.}
+
+\item{backend}{How the jobs are run when `num_cores > 1`. `"fork"` forks the current
+session (via [parallel::mclapply()]; not available on Windows). `"psock"` starts a
+fresh socket cluster ([parallel::makePSOCKcluster()]). `"auto"` (default) uses
+`"fork"` on Unix-alikes and `"psock"` on Windows, and also switches to `"psock"` when
+the RcppParallel namespace is loaded (for instance by rpsurv): a forked worker that
+uses a TBB thread pool already started in the parent can hang. Use
+`backend = "psock"` for other multithreaded native code (OpenMP) that hangs after a
+fork. Ignored when `num_cores <= 1`.}
 }
 \value{
 A combined dataframe of all simulation results. Every `grid_params` column that
@@ -73,6 +83,14 @@ If `seed` is supplied, `n * nrow(grid_params)` independent RNG streams are gener
 (replication-major), a given `(replication, condition)` cell always draws from the same stream
 regardless of core count, so runs are bit-for-bit reproducible. Do not call `set.seed()` inside
 `sim_func` when using `seed`, as that would defeat the per-stream design.
+
+With the `"psock"` backend, each worker attaches the packages attached in the calling
+session and receives the objects of the global environment that `sim_func` refers to
+(found with [codetools::findGlobals()], following global helper functions), so a
+`sim_func` written for the fork backend usually runs unchanged. Objects that cannot be
+serialised (external pointers, connections) are not available to the workers. No
+progress bar is shown with this backend. Seeded results are identical across backends
+and core counts.
 
 Each job is wrapped so that an error in `sim_func` is caught rather than lost in a worker
 process, and any warnings it emits are recorded. See `on_error` for how failures are handled.

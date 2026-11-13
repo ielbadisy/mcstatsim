@@ -1,3 +1,19 @@
+# mcstatsim 0.9.3
+
+* `summarise_sim()` no longer errors when two measures return the same column
+  names (for example two `calc_bias()` measures). The columns of the colliding
+  measures are now prefixed with the measure name (`a_bias`, `a_bias_mcse`,
+  ...); other measures keep their names. Only duplicated measure names remain
+  an error.
+* `runsim()` gains a `backend` argument (`"auto"`, `"fork"`, `"psock"`). Forked
+  workers could hang when the parent session had already started an
+  RcppParallel (TBB) thread pool, for instance after fitting an rpsurv model.
+  `"auto"` (default) now uses a PSOCK cluster when RcppParallel is loaded or on
+  Windows, and fork otherwise. PSOCK workers attach the caller's packages and
+  receive the global objects `sim_func` uses. Seeded results are identical
+  across backends. `codetools`, `parallel` and `stats` are declared in
+  `Imports`.
+
 # mcstatsim 0.9.2
 
 * Added a PDF vignette, "Monte Carlo simulation studies with mcstatsim", a
