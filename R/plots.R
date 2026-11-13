@@ -42,10 +42,10 @@ utils::globalVariables(c(
 #' sim_func <- function(mu) data.frame(est = mean(rnorm(30, mu)))
 #' res <- runsim(500, expand.grid(mu = c(0, 2)), sim_func,
 #'               show_progress = FALSE, num_cores = 1, seed = 1)
-#' plot_convergence(res, "est", by = "mu")
+#' plotconvergence(res, "est", by = "mu")
 #' }
 #' @export
-plot_convergence <- function(data, var, by = NULL, se_mult = 1) {
+plotconvergence <- function(data, var, by = NULL, se_mult = 1) {
   .need_ggplot2()
   if (!is.data.frame(data)) stop("'data' must be a dataframe.")
   if (!is.character(var) || length(var) != 1 || !var %in% names(data)) {
@@ -109,10 +109,10 @@ u_signif <- function(x) format(x, trim = TRUE, drop0trailing = TRUE)
 #' }
 #' res <- runsim(300, expand.grid(mu = c(0, 1)), sim_func,
 #'               show_progress = FALSE, num_cores = 1, seed = 1)
-#' plot_zip(res, "lo", "hi", "mu", by = "mu")
+#' plotzip(res, "lo", "hi", "mu", by = "mu")
 #' }
 #' @export
-plot_zip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95) {
+plotzip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95) {
   .need_ggplot2()
   if (!is.data.frame(data)) stop("'data' must be a dataframe.")
   for (nm in c(lower, upper, true)) {
@@ -165,11 +165,11 @@ plot_zip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95) {
 
 #' Point-Range Plot of a Performance Measure Across Conditions
 #'
-#' Takes a summary table from [summarise_sim()] and plots one performance measure per
+#' Takes a summary table from [summarisesim()] and plots one performance measure per
 #' condition as a point with a Monte Carlo error bar (`estimate +/- se_mult * MCSE`),
 #' the standard "does the method work across the design" picture.
 #'
-#' @param summary A dataframe from [summarise_sim()].
+#' @param summary A dataframe from [summarisesim()].
 #' @param measure Name of the estimate column to plot (e.g. `"coverage"`). Its Monte
 #'   Carlo standard error is taken from `paste0(measure, "_mcse")` when that column
 #'   exists.
@@ -181,15 +181,15 @@ plot_zip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95) {
 #' @return A `ggplot` object.
 #' @examples
 #' \dontrun{
-#' tab <- summarise_sim(res, by = c("mu", "n_obs"),
-#'                      measures = list(coverage = ~ calc_coverage(lo, hi, true_val[1])))
-#' plot_performance(tab, "coverage", x = "n_obs", colour = "mu", ref = 0.95)
+#' tab <- summarisesim(res, by = c("mu", "n_obs"),
+#'                      measures = list(coverage = ~ calccoverage(lo, hi, true_val[1])))
+#' plotperformance(tab, "coverage", x = "n_obs", colour = "mu", ref = 0.95)
 #' }
 #' @export
-plot_performance <- function(summary, measure, x, colour = NULL, facet = NULL,
+plotperformance <- function(summary, measure, x, colour = NULL, facet = NULL,
                              se_mult = 2, ref = NULL) {
   .need_ggplot2()
-  if (!is.data.frame(summary)) stop("'summary' must be a dataframe from summarise_sim().")
+  if (!is.data.frame(summary)) stop("'summary' must be a dataframe from summarisesim().")
   need <- c(measure, x, colour, facet)
   miss <- setdiff(need, names(summary))
   if (length(miss)) stop("column(s) not found in 'summary': ", paste(miss, collapse = ", "))

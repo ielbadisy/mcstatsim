@@ -22,9 +22,9 @@
 #' params <- expand.grid(mu = c(-1, 0, 1))
 #' res <- runsim(5, params, sim_func, show_progress = FALSE, num_cores = 1,
 #'               on_error = "omit")
-#' failure_summary(res)
+#' failuresummary(res)
 #' @export
-failure_summary <- function(x, n = NULL, digits = 4) {
+failuresummary <- function(x, n = NULL, digits = 4) {
   errors <- attr(x, "errors")
   cond_cols <- setdiff(names(errors), c("ID", "error"))
 

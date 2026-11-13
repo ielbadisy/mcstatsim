@@ -11,9 +11,9 @@
 #' df1 <- data.frame(a = 1:3, b = 4:6)
 #' df2 <- data.frame(a = 7:9, b = 10:12)
 #' nested_list <- list(list(df1, df2), list(df1, df2))
-#' combine_df(nested_list)
+#' combinedf(nested_list)
 #' @export
-combine_df <- function(nested_list) {
+combinedf <- function(nested_list) {
   if (!is.list(nested_list) || length(nested_list) < 1) {
     stop("The input must be a non-empty list of lists containing dataframes.")
   }

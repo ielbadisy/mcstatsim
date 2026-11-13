@@ -14,11 +14,11 @@
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50
-#' bias_info <- calc_bias(estimates, true_param)
+#' bias_info <- calcbias(estimates, true_param)
 #' print(bias_info)
 #' @export
 #' @importFrom stats sd var
-calc_bias <- function(estimates, true_param, digits = 4) {
+calcbias <- function(estimates, true_param, digits = 4) {
   bias <- mean(estimates) - true_param
   bias_mcse <- sqrt(var(estimates) / length(estimates))
   .mcstatsim_round(list(bias = bias, bias_mcse = bias_mcse), digits)
@@ -40,11 +40,11 @@ calc_bias <- function(estimates, true_param, digits = 4) {
 #' the uncertainty associated with the variance estimate, adjusted for kurtosis.
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
-#' variance_info <- calc_variance(estimates)
+#' variance_info <- calcvariance(estimates)
 #' print(variance_info)
 #' @export
 #' @importFrom stats sd var
-calc_variance <- function(estimates, digits = 4) {
+calcvariance <- function(estimates, digits = 4) {
   variance <- var(estimates)
   kurtosis <- (1 / (length(estimates) * sd(estimates)^4)) * sum((estimates - mean(estimates))^4)
   variance_mcse <- variance * sqrt((kurtosis - 1) / length(estimates))
@@ -69,12 +69,12 @@ calc_variance <- function(estimates, digits = 4) {
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50
-#' mse_info <- calc_mse(estimates, true_param)
+#' mse_info <- calcmse(estimates, true_param)
 #' print(mse_info)
 #' @export
 #' @importFrom stats sd var
 
-calc_mse <- function(estimates, true_param, digits = 4) {
+calcmse <- function(estimates, true_param, digits = 4) {
   mse <- mean((estimates - true_param)^2)
   sd_t <- sd(estimates)
   kurtosis <- (1 / (length(estimates) * sd_t^4)) * sum((estimates - mean(estimates))^4)
@@ -101,12 +101,12 @@ calc_mse <- function(estimates, true_param, digits = 4) {
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50
-#' rmse_info <- calc_rmse(estimates, true_param)
+#' rmse_info <- calcrmse(estimates, true_param)
 #' print(rmse_info)
 #' @export
 #' @importFrom stats sd var
 
-calc_rmse <- function(estimates, true_param, digits = 4) {
+calcrmse <- function(estimates, true_param, digits = 4) {
   mse <- mean((estimates - true_param)^2)
   rmse <- sqrt(mse)
   # Compute jackknife estimates
@@ -143,12 +143,12 @@ calc_rmse <- function(estimates, true_param, digits = 4) {
 #' ci_lower <- estimates - 1.96 * 10
 #' ci_upper <- estimates + 1.96 * 10
 #' true_param <- 50
-#' coverage_info <- calc_coverage(ci_lower, ci_upper, true_param)
+#' coverage_info <- calccoverage(ci_lower, ci_upper, true_param)
 #' print(coverage_info)
 #' @export
 #' @importFrom stats sd var
 
-calc_coverage <- function(lower_bound, upper_bound, true_param, digits = 4) {
+calccoverage <- function(lower_bound, upper_bound, true_param, digits = 4) {
   coverage <- mean(lower_bound <= true_param & true_param <= upper_bound)
   coverage_mcse <- sqrt((coverage * (1 - coverage)) / length(lower_bound))
   .mcstatsim_round(list(coverage = coverage, coverage_mcse = coverage_mcse), digits)
@@ -175,11 +175,11 @@ calc_coverage <- function(lower_bound, upper_bound, true_param, digits = 4) {
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' ci_lower <- estimates - 1.96 * 10
 #' ci_upper <- estimates + 1.96 * 10
-#' width_info <- calc_width(ci_lower, ci_upper)
+#' width_info <- calcwidth(ci_lower, ci_upper)
 #' print(width_info)
 #' @export
 #' @importFrom stats sd var
-calc_width <- function(lower_bound, upper_bound, digits = 4) {
+calcwidth <- function(lower_bound, upper_bound, digits = 4) {
   width <- mean(upper_bound - lower_bound)
   width_mcse <- sqrt(var(upper_bound - lower_bound) / length(lower_bound))
   .mcstatsim_round(list(width = width, width_mcse = width_mcse), digits)
@@ -205,11 +205,11 @@ calc_width <- function(lower_bound, upper_bound, digits = 4) {
 #' @examples
 #' set.seed(123) # For reproducibility
 #' p_values <- runif(100, min = 0, max = 1) # Simulated p-values
-#' rejection_info <- calc_rejection_rate(p_values)
+#' rejection_info <- calcrejectionrate(p_values)
 #' print(rejection_info)
 #' @export
 #' @importFrom stats sd var
-calc_rejection_rate <- function(p_values, alpha = 0.05, digits = 4) {
+calcrejectionrate <- function(p_values, alpha = 0.05, digits = 4) {
   rejection_rate <- mean(p_values < alpha)
   rejection_rate_mcse <- sqrt((rejection_rate * (1 - rejection_rate)) / length(p_values))
   .mcstatsim_round(list(rejection_rate = rejection_rate, rejection_rate_mcse = rejection_rate_mcse), digits)
@@ -237,11 +237,11 @@ calc_rejection_rate <- function(p_values, alpha = 0.05, digits = 4) {
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50 # Non-zero true parameter
-#' relative_bias_info <- calc_relative_bias(estimates, true_param)
+#' relative_bias_info <- calcrelativebias(estimates, true_param)
 #' print(relative_bias_info)
 #' @export
 #' @importFrom stats sd var
-calc_relative_bias <- function(estimates, true_param, digits = 4) {
+calcrelativebias <- function(estimates, true_param, digits = 4) {
   if (true_param == 0) {
     return(list(rel_bias = NA, rel_bias_mcse = NA))
   }
@@ -271,11 +271,11 @@ calc_relative_bias <- function(estimates, true_param, digits = 4) {
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50 # Non-zero true parameter
-#' relative_mse_info <- calc_relative_mse(estimates, true_param)
+#' relative_mse_info <- calcrelativemse(estimates, true_param)
 #' print(relative_mse_info)
 #' @export
 #' @importFrom stats sd var
-calc_relative_mse <- function(estimates, true_param, digits = 4) {
+calcrelativemse <- function(estimates, true_param, digits = 4) {
   if (true_param == 0) {
     return(list(rel_mse = NA, rel_mse_mcse = NA))
   }
@@ -294,7 +294,7 @@ calc_relative_mse <- function(estimates, true_param, digits = 4) {
 #'
 #' Computes the Relative Root Mean Squared Error (Relative RMSE) of a set of estimates with respect
 #' to a true parameter value. The Relative RMSE is the square root of the Relative Mean Squared Error
-#' (see [calc_relative_mse()]), a scale-independent measure of error that facilitates comparisons
+#' (see [calcrelativemse()]), a scale-independent measure of error that facilitates comparisons
 #' across different scales of the true parameter. This function is especially useful for evaluating the
 #' accuracy of estimates when the magnitude of the true parameter varies significantly across
 #' different scenarios. The function gracefully handles cases where the true parameter is zero by
@@ -311,16 +311,16 @@ calc_relative_mse <- function(estimates, true_param, digits = 4) {
 #' @examples
 #' estimates <- rnorm(100, mean = 50, sd = 10)
 #' true_param <- 50 # Non-zero true parameter
-#' relative_rmse_info <- calc_relative_rmse(estimates, true_param)
+#' relative_rmse_info <- calcrelativermse(estimates, true_param)
 #' print(relative_rmse_info)
 #' @export
 #' @importFrom stats sd var
-calc_relative_rmse <- function(estimates, true_param, digits = 4) {
+calcrelativermse <- function(estimates, true_param, digits = 4) {
   if (true_param == 0) {
     return(list(rel_rmse = NA, rel_rmse_mcse = NA))
   }
 
-  rmse_rel <- calc_relative_mse(estimates, true_param, digits = NULL)
+  rmse_rel <- calcrelativemse(estimates, true_param, digits = NULL)
   relative_rmse <- sqrt(rmse_rel$rel_mse)
 
   # delta method: rel_rmse = sqrt(rel_mse) => SE(rel_rmse) ~ SE(rel_mse) / (2 * rel_rmse)

@@ -13,12 +13,12 @@
 #'   Entries are `NA` where `mcse_current` is `NA` or not positive.
 #' @examples
 #' # A coverage estimate with MCSE 0.011 from 1000 reps; how many reps for MCSE 0.005?
-#' mcse_target(0.011, 1000, 0.005)
+#' mcsetarget(0.011, 1000, 0.005)
 #'
-#' # Vectorised over a summarise_sim() column
-#' # mcse_target(tab$coverage_mcse, tab$n_sim, target = 0.005)
+#' # Vectorised over a summarisesim() column
+#' # mcsetarget(tab$coverage_mcse, tab$n_sim, target = 0.005)
 #' @export
-mcse_target <- function(mcse_current, n_current, target) {
+mcsetarget <- function(mcse_current, n_current, target) {
   if (!is.numeric(mcse_current)) stop("'mcse_current' must be numeric.")
   if (!is.numeric(n_current) || any(n_current <= 0, na.rm = TRUE)) {
     stop("'n_current' must be positive.")
@@ -60,9 +60,9 @@ mcse_target <- function(mcse_current, n_current, target) {
 #' }
 #' grid <- expand.grid(mu = c(0, 1, 2))
 #' res <- runsim(20, grid, sim_func, show_progress = FALSE, num_cores = 1)
-#' check_estimates(res, by = "mu")
+#' checkestimates(res, by = "mu")
 #' @export
-check_estimates <- function(data, cols = NULL, by = NULL, digits = 4) {
+checkestimates <- function(data, cols = NULL, by = NULL, digits = 4) {
   if (!is.data.frame(data)) {
     stop("'data' must be a dataframe, typically the output of runsim().")
   }

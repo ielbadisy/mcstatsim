@@ -38,7 +38,7 @@
 #'   condition, and an `ID` column gives the replication index (1 to `n`). When `seed` is
 #'   supplied it is stored in `attr(x, "seed")`. Any warnings emitted by `sim_func` are
 #'   collected in `attr(x, "warnings")`, and, when `on_error` is not `"stop"`, failed jobs
-#'   are described in `attr(x, "errors")` (see [failure_summary()]).
+#'   are described in `attr(x, "errors")` (see [failuresummary()]).
 #' @details The function first validates the input parameters. It then builds a single flat list of
 #' `n * nrow(grid_params)` jobs (replication-major order: all conditions for replication 1, then all
 #' conditions for replication 2, and so on) and dispatches it in one load-balanced parallel pass via
@@ -415,7 +415,7 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   combined_results$ID <- rep(rep_index[keep], times = row_counts)
 
   # prepend the condition's grid columns (those sim_func did not already return),
-  # so the result identifies its own conditions for aggregate()/summarise_sim()
+  # so the result identifies its own conditions for aggregate()/summarisesim()
   new_cols <- setdiff(names(grid_params), names(combined_results))
   if (length(new_cols)) {
     kept_cond <- rep(cond_index[keep], times = row_counts)
