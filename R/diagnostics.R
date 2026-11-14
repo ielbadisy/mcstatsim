@@ -92,7 +92,9 @@ checkestimates <- function(data, cols = NULL, by = NULL, digits = 4) {
     group_rows <- list(seq_len(nrow(data)))
   } else {
     key_tab <- unique(data[, by, drop = FALSE])
-    key_tab <- key_tab[do.call(order, as.list(key_tab)), , drop = FALSE]
+    # unname: a column called `method`, `decreasing` or `na.last` must not be
+    # matched to an argument of order()
+    key_tab <- key_tab[do.call(order, unname(as.list(key_tab))), , drop = FALSE]
     rownames(key_tab) <- NULL
     group_rows <- lapply(seq_len(nrow(key_tab)), function(i) {
       keep <- rep(TRUE, nrow(data))

@@ -62,3 +62,13 @@ test_that("checkestimates rounds prop_bad to digits (default 4)", {
   expect_equal(checkestimates(df, cols = "a", digits = 2)$prop_bad, 0.14)
   expect_equal(checkestimates(df, cols = "a", digits = NULL)$prop_bad, 1 / 7)
 })
+
+test_that("checkestimates() works when a grouping column is named method", {
+  res <- data.frame(method = rep(c("b", "a"), each = 4),
+                    decreasing = rep(1:2, 4),
+                    est = c(1, Inf, 3, 4, NA, 6, 7, 8))
+  out <- checkestimates(res, cols = "est", by = c("method", "decreasing"))
+  expect_equal(nrow(out), 2L)
+  expect_setequal(out$method, c("a", "b"))
+  expect_true(all(out$n_bad == 1L))
+})
