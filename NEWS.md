@@ -1,3 +1,16 @@
+# mcstatsim 0.9.6
+
+* `runsim()`: `sim_func` may now return a named vector (`c(est = 1.2, se = 0.3)`)
+  or a named list of equal-length vectors as well as a data frame; both are
+  turned into a data frame.
+* `checkestimates()` no longer fails with a `match.arg()` error when a `by`
+  column is named `method` (or `decreasing`, `na.last`), as `summarisesim()`
+  in 0.9.5.
+* `runsim(backend = "psock")` now sends jobs to the workers in chunks (about
+  four per worker) instead of one socket round trip per job. Runs with many
+  small replications were up to 100 times slower than the fork backend, which
+  made the vignette build look hung under knitr. Seeded results are unchanged.
+
 # mcstatsim 0.9.5
 
 * `summarisesim()` no longer fails with a `match.arg()` error when a `by`

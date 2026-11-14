@@ -284,3 +284,18 @@ test_that("psock backend sends jobs in chunks, not one socket round trip per job
   r1 <- runsim(1000, grid, sim_ci, seed = 202, num_cores = 1, show_progress = FALSE)
   expect_identical(r$est, r1$est)
 })
+
+test_that("runsim() accepts a named vector or a named list from sim_func", {
+  grid <- expand.grid(n = c(10, 20))
+  f_df  <- function(n) { x <- rnorm(n); data.frame(est = mean(x), se = 1 / sqrt(n)) }
+  f_vec <- function(n) { x <- rnorm(n); c(est = mean(x), se = 1 / sqrt(n)) }
+  f_lst <- function(n) { x <- rnorm(n); list(est = mean(x), se = 1 / sqrt(n)) }
+  r_df  <- runsim(5, grid, f_df,  seed = 1, num_cores = 1, show_progress = FALSE)
+  r_vec <- runsim(5, grid, f_vec, seed = 1, num_cores = 1, show_progress = FALSE)
+  r_lst <- runsim(5, grid, f_lst, seed = 1, num_cores = 1, show_progress = FALSE)
+  expect_identical(r_vec, r_df)
+  expect_identical(r_lst, r_df)
+
+  f_bad <- function(n) c(1, 2)
+  expect_error(runsim(2, grid, f_bad, num_cores = 1, show_progress = FALSE), "named")
+})
