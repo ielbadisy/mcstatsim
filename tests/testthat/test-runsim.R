@@ -261,3 +261,26 @@ test_that("a fork worker that dies is reported instead of lost", {
     "worker process died"
   )
 })
+
+test_that("psock backend sends jobs in chunks, not one socket round trip per job", {
+  expect_equal(.runsim_psock_chunk_size(10L, 2L), 2L)
+  expect_equal(.runsim_psock_chunk_size(2000L, 2L), 250L)
+  expect_equal(.runsim_psock_chunk_size(3L, 4L), 1L)
+
+  skip_on_cran()
+  sim_ci <- function(n, mu) {
+    x <- rnorm(n, mean = mu)
+    est <- mean(x)
+    se <- sd(x) / sqrt(n)
+    data.frame(est = est, lo = est - 2 * se, hi = est + 2 * se, truth = mu)
+  }
+  grid <- expand.grid(n = c(15, 60), mu = 0)
+  t0 <- Sys.time()
+  r <- runsim(1000, grid, sim_ci, seed = 202, num_cores = 2,
+              show_progress = FALSE, backend = "psock")
+  el <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+  expect_equal(nrow(r), 2000L)
+  expect_lt(el, 20)
+  r1 <- runsim(1000, grid, sim_ci, seed = 202, num_cores = 1, show_progress = FALSE)
+  expect_identical(r$est, r1$est)
+})

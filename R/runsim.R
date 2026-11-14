@@ -195,7 +195,8 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
       out <- mcpmap(lists = map_lists, func = run_one, num_cores = num_cores, show_progress = show_progress)
     } else {
       items <- lapply(job_idx, function(k) list(job = jobs[[k]], stream = streams[[k]]))
-      out <- parallel::parLapplyLB(cl, items, .runsim_item_runner(run_one), chunk.size = 1L)
+      out <- parallel::parLapplyLB(cl, items, .runsim_item_runner(run_one),
+                                   chunk.size = .runsim_psock_chunk_size(length(items), length(cl)))
     }
     if (is.null(out) || length(out) != length(job_idx)) {
       stop("Failed to obtain simulation results for every job ",
@@ -317,6 +318,13 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   f <- function(item) run_one(item$job, item$stream)
   environment(f) <- env
   f
+}
+
+# Jobs per PSOCK message. One job per message costs a socket round trip each,
+# which with small replications (and TCP delayed acknowledgement) can take tens
+# of milliseconds per job; about four chunks per worker keeps load balancing.
+.runsim_psock_chunk_size <- function(n_items, n_workers) {
+  max(1L, as.integer(ceiling(n_items / (4L * n_workers))))
 }
 
 # Pick the parallel backend. "auto" avoids fork on Windows and when the
