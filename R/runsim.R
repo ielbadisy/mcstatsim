@@ -4,7 +4,10 @@
 #'
 #' @param n The number of times the simulation function should be executed for each set of parameters. Must be a positive integer.
 #' @param grid_params A dataframe where each row corresponds to a unique combination of parameters for the simulation. Typically generated using `expand.grid`.
-#' @param sim_func The simulation function to be applied. This function should accept parameters corresponding to a row in `grid_params` and return a dataframe or a list that can be row-bound.
+#' @param sim_func The simulation function to be applied. It takes arguments named after
+#'   columns of `grid_params` and returns a data frame (one or more rows), a named vector
+#'   such as `c(est = 1.2, se = 0.3)`, or a named list of equal-length vectors; the last
+#'   two are turned into a data frame.
 #' @param show_progress Logical indicating whether to display progress messages during the execution of the simulations.
 #' @param num_cores The number of cores to use for parallel execution. The default is one less than the total number of cores available on the system.
 #' @param seed Optional single number. When supplied, every job is assigned its own
@@ -423,6 +426,22 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   cl
 }
 
+# A named atomic vector (c(est = 1, se = 2)) or a named list of equal-length
+# atomic vectors becomes a data frame; anything else is returned unchanged.
+.runsim_as_df <- function(v) {
+  if (is.data.frame(v)) return(v)
+  nm <- names(v)
+  if (is.null(nm) || anyNA(nm) || any(!nzchar(nm))) return(v)
+  if (is.atomic(v) && is.null(dim(v))) v <- as.list(v)
+  if (!is.list(v) || !length(v)) return(v)
+  lens <- lengths(v)
+  if (!all(vapply(v, function(x) is.atomic(x) && is.null(dim(x)), logical(1))) ||
+      any(lens != lens[1L]) || lens[1L] == 0L) {
+    return(v)
+  }
+  as.data.frame(v, stringsAsFactors = FALSE, optional = TRUE)
+}
+
 # Turn per-job envelopes into the combined result data frame, applying the
 # on_error policy and attaching the "errors"/"warnings"/"seed" attributes.
 .runsim_assemble <- function(values, warns, cond_index, rep_index, grid_params, n_jobs, on_error, seed) {
@@ -456,9 +475,10 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
                  n_jobs, errors_df$error[1]))
   }
 
+  ok_values <- lapply(ok_values, .runsim_as_df)
   is_df <- vapply(ok_values, is.data.frame, logical(1))
   if (!all(is_df)) {
-    stop("'sim_func' must return a data frame for every job; ",
+    stop("'sim_func' must return a data frame, a named vector or a named list for every job; ",
          sum(!is_df), " of ", length(ok_values), " successful job(s) returned something else.")
   }
 

@@ -22,7 +22,10 @@ runsim(
 
 \item{grid_params}{A dataframe where each row corresponds to a unique combination of parameters for the simulation. Typically generated using `expand.grid`.}
 
-\item{sim_func}{The simulation function to be applied. This function should accept parameters corresponding to a row in `grid_params` and return a dataframe or a list that can be row-bound.}
+\item{sim_func}{The simulation function to be applied. It takes arguments named after
+columns of `grid_params` and returns a data frame (one or more rows), a named vector
+such as `c(est = 1.2, se = 0.3)`, or a named list of equal-length vectors; the last
+two are turned into a data frame.}
 
 \item{show_progress}{Logical indicating whether to display progress messages during the execution of the simulations.}
 

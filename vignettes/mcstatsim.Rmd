@@ -110,7 +110,8 @@ should be for an unbiased estimator.
 1. take arguments that are a subset of the `grid_params` column names,
 2. carry out exactly **one** replication, and
 3. return a `data.frame` (usually one row; several rows are allowed and are all
-   kept).
+   kept). A named vector such as `c(est = 1.2, se = 0.3)` or a named list of
+   equal-length vectors is also accepted and turned into a data frame.
 
 It should **not** set a seed internally (see the next section) and should **not**
 draw plots. Anything constant within a scenario, such as the true parameter
