@@ -299,3 +299,13 @@ test_that("runsim() accepts a named vector or a named list from sim_func", {
   f_bad <- function(n) c(1, 2)
   expect_error(runsim(2, grid, f_bad, num_cores = 1, show_progress = FALSE), "named")
 })
+
+test_that("psock workers inherit the session library paths", {
+  skip_on_cran()
+  tmp <- tempfile("lib"); dir.create(tmp); tmp <- normalizePath(tmp)
+  old <- .libPaths(); .libPaths(c(tmp, old)); on.exit(.libPaths(old))
+  sim <- function(a) data.frame(lib = .libPaths()[1])
+  res <- runsim(2, data.frame(a = 1:2), sim, show_progress = FALSE, num_cores = 2, seed = 1,
+                backend = "psock")
+  expect_true(all(normalizePath(res$lib) == tmp))
+})
