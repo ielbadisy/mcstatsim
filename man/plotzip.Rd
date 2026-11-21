@@ -16,7 +16,8 @@ plotzip(
   colours = c(covers = "#0072B2", misses = "#D55E00"),
   title = NULL,
   subtitle = NULL,
-  caption = NULL
+  caption = NULL,
+  theme = NULL
 )
 }
 \arguments{
@@ -42,6 +43,10 @@ puts all panels on one x axis so intervals can be compared across conditions.}
 \item{colours}{Colours of the covering and non-covering intervals.}
 
 \item{title, subtitle, caption}{Plot text; `NULL` (default) draws none.}
+
+\item{theme}{A ggplot2 theme added to the plot. `NULL` (default) adds [ggplot2::theme_bw()]
+when the active theme is ggplot2's default, and nothing otherwise, so a theme set with
+[ggplot2::theme_set()] is respected.}
 }
 \value{
 A `ggplot` object. Its data holds the `by` columns, `condition` (a factor in

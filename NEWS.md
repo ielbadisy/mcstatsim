@@ -1,3 +1,24 @@
+# mcstatsim 0.9.9
+
+Additions and plot bug fixes; no numeric result changes and all existing calls still work.
+
+* New `calcmean(estimates, na.rm = FALSE, digits = 4)`: mean of a per-replicate quantity with
+  its Monte Carlo standard error (`sd / sqrt(k)`) and `n_valid`; `na.rm = TRUE` drops
+  non-finite replicates, so `summarisesim()` no longer needs a hand-written function for that.
+* `plotperformance()`: rows with a non-finite estimate (power when every null is true) are now
+  dropped silently instead of triggering ggplot2's "Removed rows" warning (bug fix); a
+  non-finite MCSE draws the point without a bar.
+* `plotperformance()`: `ref` may be a data frame with a `yintercept` column and the `facet`
+  column (or a `measure` column), so each facet gets its own reference line. Vector forms
+  are unchanged.
+* `plotperformance()`, `plotzip()`, `plotconvergence()`: an empty display name in `labels`
+  (`c(het = "")`) now gives strips with the bare value instead of "= value" (bug fix).
+* `plotconvergence()`: a display name for `var` in `labels` is now used as the y axis title as
+  given, without the "Running mean of" prefix (bug fix).
+* `plotperformance()`, `plotzip()`, `plotconvergence()`: new `theme` argument. The default
+  `NULL` keeps `theme_bw()` for users on ggplot2's default theme and otherwise leaves the
+  theme set with `ggplot2::theme_set()` in force (before, `theme_bw()` always overrode it).
+
 # mcstatsim 0.9.8
 
 * `runsim(backend = "psock")` (the default on Windows): workers now use the library paths of

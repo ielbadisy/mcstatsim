@@ -49,3 +49,14 @@ test_that("calcrelativermse MCSE is NA when every estimate hits the true value",
   expect_equal(rr$rel_rmse, 0)
   expect_true(is.na(rr$rel_rmse_mcse))
 })
+
+test_that("calcmean matches mean and sd/sqrt(k), dropping non-finite values on request", {
+  x <- c(1, 2, 4, NA, NaN, Inf)
+  r <- calcmean(x, na.rm = TRUE, digits = NULL)
+  expect_equal(r$mean, mean(c(1, 2, 4))); expect_equal(r$mean_mcse, sd(c(1, 2, 4)) / sqrt(3))
+  expect_equal(r$n_valid, 3)
+  expect_true(is.na(calcmean(x)$mean))
+  # standard error of the mean, checked against lm's intercept SE
+  y <- c(0.8, 1.1, 0.95, 1.3, 0.7)
+  expect_equal(calcmean(y, digits = NULL)$mean_mcse, summary(lm(y ~ 1))$coefficients[1, 2])
+})

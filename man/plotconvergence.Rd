@@ -14,7 +14,8 @@ plotconvergence(
   scales = "free_y",
   title = NULL,
   subtitle = NULL,
-  caption = NULL
+  caption = NULL,
+  theme = NULL
 )
 }
 \arguments{
@@ -33,11 +34,17 @@ in the order of their factor levels (numeric order for numbers). Strips read
 `"wilson"`.}
 
 \item{labels}{Optional named character vector of display names for columns
-(e.g. `c(n = "Sample size", rej = "Rejection rate")`), used in the axis and strips.}
+(e.g. `c(n = "Sample size", rej = "Rejection rate")`), used in the strips and, for
+`var`, as the y axis title as given (otherwise "Running mean of <var>"). An empty
+name (`c(n = "")`) gives strips with the bare value.}
 
 \item{scales}{Facet scales passed to [ggplot2::facet_wrap()] (default `"free_y"`).}
 
 \item{title, subtitle, caption}{Plot text; `NULL` (default) draws none.}
+
+\item{theme}{A ggplot2 theme added to the plot. `NULL` (default) adds [ggplot2::theme_bw()]
+when the active theme is ggplot2's default, and nothing otherwise, so a theme set with
+[ggplot2::theme_set()] is respected.}
 }
 \value{
 A `ggplot` object. Its data holds the `by` columns, `condition` (a factor in

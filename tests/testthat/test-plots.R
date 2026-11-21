@@ -163,3 +163,46 @@ test_that("plotperformance: labels, palette, strips, no title, several measures 
     plotperformance(tab, c("bias", "coverage"), x = "method", facet = "n", ref = c(0, 0.95))),
     "ggplot_built")
 })
+
+test_that("plotperformance drops non-finite estimates without a warning", {
+  skip_if_no_ggplot2()
+  ms <- expand.grid(method = c("A", "B"), m0 = c(10, 20))
+  ms$power <- c(.6, .7, NaN, NaN); ms$power_mcse <- c(.01, .01, NaN, NaN)
+  ms$fwer <- .05; ms$fwer_mcse <- c(.01, NA, .01, .01)
+  p <- plotperformance(ms, c("fwer", "power"), x = "method", colour = "m0")
+  expect_equal(nrow(p$data), 6)
+  expect_no_warning(ggplot2::ggplot_build(p))
+})
+
+test_that("plotperformance ref as a data frame keyed by the facet", {
+  skip_if_no_ggplot2()
+  pf <- expand.grid(n = c(50, 100), rr = c(0.75, 1))
+  pf$rr_rate <- c(.5, .8, .05, .05); pf$rr_rate_mcse <- .01
+  p <- plotperformance(pf, "rr_rate", "n", facet = "rr",
+                       ref = data.frame(rr = c(0.75, 1), yintercept = c(0.9, 0.05)))
+  b <- ggplot2::ggplot_build(p)$data[[1]]
+  expect_equal(b$yintercept[order(b$PANEL)], c(0.9, 0.05))
+  expect_equal(as.integer(b$PANEL[order(b$PANEL)]), 1:2)
+})
+
+test_that("empty label gives bare strip values; convergence label taken as given", {
+  skip_if_no_ggplot2()
+  hs <- data.frame(method = "OLS", het = c("Constant", "Rising"), coverage = .95)
+  p <- plotperformance(hs, "coverage", "method", facet = "het", labels = c(het = ""))
+  s <- p$facet$params$labeller(data.frame(het = c("Constant", "Rising")))
+  expect_equal(s[[1]], c("Constant", "Rising"))
+  res <- data.frame(ID = 1:50, rej = rep(0:1, 25))
+  expect_equal(plotconvergence(res, "rej", labels = c(rej = "Type I error"))$labels$y, "Type I error")
+  expect_equal(plotconvergence(res, "rej")$labels$y, "Running mean of rej")
+})
+
+test_that("theme: bw on ggplot2's default theme, the active theme otherwise, or as given", {
+  skip_if_no_ggplot2()
+  hs <- data.frame(method = "OLS", coverage = .95)
+  old <- ggplot2::theme_set(ggplot2::theme_grey()); on.exit(ggplot2::theme_set(old))
+  expect_true(length(plotperformance(hs, "coverage", "method")$theme) > 0)
+  ggplot2::theme_set(ggplot2::theme_minimal())
+  expect_length(plotperformance(hs, "coverage", "method")$theme, 0)
+  p <- plotperformance(hs, "coverage", "method", theme = ggplot2::theme_classic())
+  expect_true(length(p$theme) > 0)
+})

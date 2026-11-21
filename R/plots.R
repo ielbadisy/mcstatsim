@@ -15,8 +15,10 @@ PAL <- c("#0072B2", "#D55E00", "#009E73", "#E69F00", "#56B4E9", "#CC79A7", "#F0E
 
 # facet labeller giving "name = value" strips (one line); ".measure" shows the value only
 .striplab <- function(labels) function(l) {
-  out <- lapply(names(l), function(v) if (v == ".measure") as.character(l[[v]])
-                else paste(.lab(v, labels), "=", l[[v]]))
+  out <- lapply(names(l), function(v) {
+    nm <- .lab(v, labels)
+    if (v == ".measure" || !nzchar(nm)) as.character(l[[v]]) else paste(nm, "=", l[[v]])
+  })
   list(do.call(paste, c(out, sep = ", ")))
 }
 
@@ -34,6 +36,13 @@ PAL <- c("#0072B2", "#D55E00", "#009E73", "#E69F00", "#56B4E9", "#CC79A7", "#F0E
   out$condition <- factor(out$condition, levels = intersect(names(parts), out$condition))
   rownames(out) <- NULL
   out
+}
+
+# theme_bw() for users on ggplot2's default theme (unchanged look), otherwise the theme
+# they set with theme_set(), so package figures match the rest of a document
+.theme <- function(theme) {
+  if (!is.null(theme)) return(theme)
+  if (identical(ggplot2::theme_get(), ggplot2::theme_grey())) ggplot2::theme_bw()
 }
 
 .need_ggplot2 <- function() {
@@ -70,9 +79,14 @@ utils::globalVariables(c(
 #' @param band `"auto"` (default: Wilson for a 0/1 column, Wald otherwise), `"wald"` or
 #'   `"wilson"`.
 #' @param labels Optional named character vector of display names for columns
-#'   (e.g. `c(n = "Sample size", rej = "Rejection rate")`), used in the axis and strips.
+#'   (e.g. `c(n = "Sample size", rej = "Rejection rate")`), used in the strips and, for
+#'   `var`, as the y axis title as given (otherwise "Running mean of <var>"). An empty
+#'   name (`c(n = "")`) gives strips with the bare value.
 #' @param scales Facet scales passed to [ggplot2::facet_wrap()] (default `"free_y"`).
 #' @param title,subtitle,caption Plot text; `NULL` (default) draws none.
+#' @param theme A ggplot2 theme added to the plot. `NULL` (default) adds [ggplot2::theme_bw()]
+#'   when the active theme is ggplot2's default, and nothing otherwise, so a theme set with
+#'   [ggplot2::theme_set()] is respected.
 #' @return A `ggplot` object. Its data holds the `by` columns, `condition` (a factor in
 #'   panel order), `replication`, `estimate`, `lo` and `hi`.
 #' @examples
@@ -85,7 +99,7 @@ utils::globalVariables(c(
 #' @export
 plotconvergence <- function(data, var, by = NULL, se_mult = 1, band = c("auto", "wald", "wilson"),
                             labels = NULL, scales = "free_y", title = NULL, subtitle = NULL,
-                            caption = NULL) {
+                            caption = NULL, theme = NULL) {
   .need_ggplot2()
   band <- match.arg(band)
   if (!is.data.frame(data)) stop("'data' must be a dataframe.")
@@ -115,9 +129,9 @@ plotconvergence <- function(data, var, by = NULL, se_mult = 1, band = c("auto", 
   p <- ggplot2::ggplot(traces, ggplot2::aes(x = replication, y = estimate)) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = lo, ymax = hi), fill = "grey70", alpha = 0.5) +
     ggplot2::geom_line() +
-    ggplot2::labs(x = "Replications", y = paste("Running mean of", .lab(var, labels)),
+    ggplot2::labs(x = "Replications", y = if (var %in% names(labels)) labels[[var]] else paste("Running mean of", var),
                   title = title, subtitle = subtitle, caption = caption) +
-    ggplot2::theme_bw()
+    .theme(theme)
   if (!is.null(by)) p <- p + ggplot2::facet_wrap(by, scales = scales, labeller = .striplab(labels))
   p
 }
@@ -145,6 +159,9 @@ plotconvergence <- function(data, var, by = NULL, se_mult = 1, band = c("auto", 
 #'   puts all panels on one x axis so intervals can be compared across conditions.
 #' @param colours Colours of the covering and non-covering intervals.
 #' @param title,subtitle,caption Plot text; `NULL` (default) draws none.
+#' @param theme A ggplot2 theme added to the plot. `NULL` (default) adds [ggplot2::theme_bw()]
+#'   when the active theme is ggplot2's default, and nothing otherwise, so a theme set with
+#'   [ggplot2::theme_set()] is respected.
 #' @return A `ggplot` object. Its data holds the `by` columns, `condition` (a factor in
 #'   panel order), `centile`, `lo`, `hi`, `true` and `covers`.
 #' @references Morris TP, White IR, Crowther MJ (2019). Using simulation studies to
@@ -162,7 +179,7 @@ plotconvergence <- function(data, var, by = NULL, se_mult = 1, band = c("auto", 
 #' @export
 plotzip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95, labels = NULL,
                     scales = "fixed", colours = c(covers = "#0072B2", misses = "#D55E00"),
-                    title = NULL, subtitle = NULL, caption = NULL) {
+                    title = NULL, subtitle = NULL, caption = NULL, theme = NULL) {
   .need_ggplot2()
   if (!is.data.frame(data)) stop("'data' must be a dataframe.")
   if (is.numeric(true)) { data$.true <- rep_len(true, nrow(data)); true <- ".true" }
@@ -204,7 +221,7 @@ plotzip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95, labe
     ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(linewidth = 2))) +
     ggplot2::labs(x = "Confidence interval", y = "Fractional centile of |z|",
                   title = title, subtitle = subtitle, caption = caption) +
-    ggplot2::theme_bw()
+    .theme(theme)
   if (!is.null(by)) p <- p + ggplot2::facet_wrap(by, scales = scales, labeller = .striplab(labels))
   p
 }
@@ -221,6 +238,8 @@ plotzip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95, labe
 #' @param measure Name(s) of the estimate column(s) to plot (e.g. `"coverage"`, or
 #'   `c("bias", "coverage")` for one row of panels per measure). Each Monte Carlo
 #'   standard error is taken from `paste0(measure, "_mcse")` when that column exists.
+#'   Rows with a non-finite estimate (power when every null is true, say) are dropped
+#'   silently; a non-finite MCSE draws the point without a bar.
 #' @param x Name of the column to place on the x axis (a design factor).
 #' @param colour Optional column mapped to colour.
 #' @param facet Optional column to facet by.
@@ -228,15 +247,22 @@ plotzip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95, labe
 #' @param ref Optional numeric reference line(s) (e.g. `0.95` for coverage, `0` for
 #'   bias). With several measures, a named vector (`c(bias = 0, coverage = 0.95)`) or one
 #'   value per measure draws each line in its own panel; otherwise all lines go in
-#'   every panel.
+#'   every panel. A data frame with a `yintercept` column and the `facet` column (and/or
+#'   a `measure` column naming the measure) draws each line in its own facet, e.g.
+#'   `data.frame(rr = c(0.75, 1), yintercept = c(0.9, 0.05))` for power and type I
+#'   error in facets of `rr`.
 #' @param labels Optional named character vector of display names for columns, e.g.
 #'   `c(n = "Sample size", coverage = "Coverage", method = "Method")`, used in the axes,
-#'   legend and strips (strips read `name = value`).
+#'   legend and strips (strips read `name = value`; an empty name, `c(het = "")`, gives
+#'   the bare value).
 #' @param palette Optional colour values for `colour`. The default uses blue and
 #'   vermillion, then the Okabe-Ito palette (up to 8 groups; ggplot2's default beyond).
 #' @param scales Facet scales. `NULL` (default) means `"fixed"` for one measure and
 #'   `"free_y"` for several.
 #' @param title,subtitle,caption Plot text; `NULL` (default) draws none.
+#' @param theme A ggplot2 theme added to the plot. `NULL` (default) adds [ggplot2::theme_bw()]
+#'   when the active theme is ggplot2's default, and nothing otherwise, so a theme set with
+#'   [ggplot2::theme_set()] is respected.
 #' @return A `ggplot` object. Only `x`, `y` and `colour` are mapped globally (to `.x`,
 #'   `.value` and `.colour`), so layers added with `+` need no `inherit.aes = FALSE`;
 #'   the error bar uses `.lo` and `.hi`, and all columns of `summary` are kept.
@@ -249,7 +275,8 @@ plotzip <- function(data, lower, upper, true, by = NULL, conf_level = 0.95, labe
 #' @export
 plotperformance <- function(summary, measure, x, colour = NULL, facet = NULL,
                             se_mult = 2, ref = NULL, labels = NULL, palette = NULL,
-                            scales = NULL, title = NULL, subtitle = NULL, caption = NULL) {
+                            scales = NULL, title = NULL, subtitle = NULL, caption = NULL,
+                            theme = NULL) {
   .need_ggplot2()
   if (!is.data.frame(summary)) stop("'summary' must be a dataframe from summarisesim().")
   need <- c(measure, x, colour, facet)
@@ -266,6 +293,10 @@ plotperformance <- function(summary, measure, x, colour = NULL, facet = NULL,
     s$.measure <- factor(.lab(m, labels), ml)
     s
   }))
+  # undefined values (power with no false null, say) are dropped, not warned about
+  d <- d[is.finite(d$.value), , drop = FALSE]
+  bad <- !is.finite(d$.lo) | !is.finite(d$.hi)
+  d$.lo[bad] <- d$.hi[bad] <- d$.value[bad]
   d$.x <- factor(d[[x]])
   multi <- length(measure) > 1
   if (is.null(scales)) scales <- if (multi) "free_y" else "fixed"
@@ -276,7 +307,12 @@ plotperformance <- function(summary, measure, x, colour = NULL, facet = NULL,
   }
 
   p <- ggplot2::ggplot(d, aes_pt)
-  if (!is.null(ref)) {
+  if (is.data.frame(ref)) {
+    rd <- ref
+    if ("measure" %in% names(rd)) rd$.measure <- factor(.lab(rd$measure, labels), ml)
+    p <- p + ggplot2::geom_hline(data = rd, ggplot2::aes(yintercept = yintercept),
+                                 linetype = 2, colour = "grey40", inherit.aes = FALSE)
+  } else if (!is.null(ref)) {
     nm <- if (!is.null(names(ref))) names(ref) else if (length(ref) == length(measure)) measure
     rd <- if (is.null(nm)) data.frame(yintercept = ref) else
       data.frame(.measure = factor(.lab(nm, labels), ml), yintercept = unname(ref))
@@ -290,7 +326,7 @@ plotperformance <- function(summary, measure, x, colour = NULL, facet = NULL,
     ggplot2::labs(x = .lab(x, labels), y = if (multi) NULL else ml,
                   colour = if (!is.null(colour)) .lab(colour, labels),
                   title = title, subtitle = subtitle, caption = caption) +
-    ggplot2::theme_bw()
+    .theme(theme)
   if (!is.null(colour)) {
     k <- nlevels(d$.colour)
     pal <- if (!is.null(palette)) palette else if (k <= length(PAL)) PAL[seq_len(k)]
