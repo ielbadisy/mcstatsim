@@ -75,3 +75,91 @@ test_that("plotperformance errors on missing columns", {
                        measures = list(bias = ~ calcbias(est, true_val[1])))
   expect_error(plotperformance(tab, "coverage", x = "n_obs"), "not found in 'summary'")
 })
+
+zipres <- function() {
+  sf <- function(n, method) {
+    x <- rnorm(n); s <- sd(x) / sqrt(n)
+    data.frame(est = mean(x), lo = mean(x) - 1.96 * s, hi = mean(x) + 1.96 * s, true = 0,
+               p = 2 * pnorm(-abs(mean(x) / s)))
+  }
+  g <- expand.grid(n = c(10, 25, 55, 200), method = factor(c("wald", "bca"), c("wald", "bca")))
+  runsim(60, g, sf, show_progress = FALSE, num_cores = 1, seed = 2)
+}
+strips <- function(p) {
+  b <- ggplot2::ggplot_build(p)
+  unlist(b$layout$facet$params$labeller(b$layout$layout[names(b$layout$facet$params$facets)]))
+}
+
+test_that("plotzip orders panels by numeric value and factor levels, strips name = value", {
+  skip_if_no_ggplot2()
+  res <- zipres()
+  p <- plotzip(res, "lo", "hi", "true", by = "n")
+  expect_equal(levels(p$data$condition), c("10", "25", "55", "200"))
+  expect_equal(strips(p), paste("n =", c(10, 25, 55, 200)))
+  p2 <- plotzip(res, "lo", "hi", "true", by = c("method", "n"), labels = c(method = "Interval"))
+  expect_equal(strips(p2)[1:2], c("Interval = wald, n = 10", "Interval = wald, n = 25"))
+  expect_true(is.factor(p2$data$method) && is.numeric(p2$data$n))
+  expect_s3_class(ggplot2::ggplot_build(p2 + ggplot2::facet_wrap(~ method)), "ggplot_built")
+})
+
+test_that("plotzip takes a numeric true, no default title, fixed scales, thick legend keys", {
+  skip_if_no_ggplot2()
+  res <- zipres()
+  p <- plotzip(res, "lo", "hi", 0, by = "n")
+  expect_equal(p$data, plotzip(res, "lo", "hi", "true", by = "n")$data)
+  expect_null(p$labels$title)
+  expect_false(p$facet$params$free$x)
+  expect_equal(p$guides$guides$colour$params$override.aes$linewidth, 2)
+  expect_equal(plotzip(res, "lo", "hi", 0, title = "Zip")$labels$title, "Zip")
+  expect_true(plotzip(res, "lo", "hi", 0, by = "n", scales = "free_x")$facet$params$free$x)
+})
+
+test_that("plotconvergence uses a Wilson band for 0/1 data that stays in [0, 1]", {
+  skip_if_no_ggplot2()
+  res <- zipres()
+  res$rej <- as.numeric(res$p < 0.05)
+  p <- plotconvergence(res, "rej", by = "n", se_mult = 2)
+  d <- p$data
+  expect_true(all(d$lo >= 0 & d$hi <= 1))
+  expect_equal(levels(d$condition), c("10", "25", "55", "200"))
+  expect_null(p$labels$title)
+  # Wilson bounds match prop.test(correct = FALSE) at z = 2
+  r <- d[d$n == 10, ][30, ]
+  x <- res[res$n == 10, ]; x <- x[order(x$ID), "rej"][1:30]
+  ci <- prop.test(sum(x), 30, conf.level = 2 * pnorm(2) - 1, correct = FALSE)$conf.int
+  expect_equal(c(r$lo, r$hi), as.numeric(ci), tolerance = 1e-10)
+  # Wald band unchanged when asked for
+  w <- plotconvergence(res, "rej", by = "n", se_mult = 2, band = "wald")$data
+  expect_true(any(w$lo < 0))
+  expect_equal(w$estimate, d$estimate)
+})
+
+test_that("plotperformance: labels, palette, strips, no title, several measures and refs", {
+  skip_if_no_ggplot2()
+  res <- zipres()
+  tab <- summarisesim(res, by = c("n", "method"),
+    measures = list(coverage = ~ calccoverage(lo, hi, true[1]), bias = ~ calcbias(est, true[1])))
+  p <- plotperformance(tab, "coverage", x = "n", colour = "method", facet = "n", ref = 0.95,
+                       labels = c(n = "Sample size", coverage = "Coverage", method = "Interval"))
+  expect_null(p$labels$title)
+  expect_equal(c(p$labels$x, p$labels$y, p$labels$colour), c("Sample size", "Coverage", "Interval"))
+  b <- ggplot2::ggplot_build(p)
+  expect_setequal(unique(b$data[[2]]$colour), c("#0072B2", "#D55E00"))
+  expect_equal(strips(p)[1], "Sample size = 10")
+  expect_equal(plotperformance(tab, "coverage", "n", colour = "method",
+                               palette = c("black", "grey50"))$scales$scales[[1]]$palette(2),
+               c("black", "grey50"))
+  # added layers need no inherit.aes = FALSE
+  expect_s3_class(ggplot2::ggplot_build(p + ggplot2::geom_line()), "ggplot_built")
+  q <- plotperformance(tab, c("bias", "coverage"), x = "n", colour = "method",
+                       ref = c(bias = 0, coverage = 0.95))
+  bq <- ggplot2::ggplot_build(q)
+  expect_equal(levels(q$data$.measure), c("bias", "coverage"))
+  expect_true(q$facet$params$free$y)
+  h <- bq$data[[1]]
+  expect_equal(h$yintercept[order(h$PANEL)], c(0, 0.95))
+  expect_equal(nrow(q$data), 2 * nrow(tab))
+  expect_s3_class(ggplot2::ggplot_build(
+    plotperformance(tab, c("bias", "coverage"), x = "method", facet = "n", ref = c(0, 0.95))),
+    "ggplot_built")
+})

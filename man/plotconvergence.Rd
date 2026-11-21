@@ -4,7 +4,18 @@
 \alias{plotconvergence}
 \title{Convergence Trace of a Monte Carlo Estimate}
 \usage{
-plotconvergence(data, var, by = NULL, se_mult = 1)
+plotconvergence(
+  data,
+  var,
+  by = NULL,
+  se_mult = 1,
+  band = c("auto", "wald", "wilson"),
+  labels = NULL,
+  scales = "free_y",
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL
+)
 }
 \arguments{
 \item{data}{A replicate-level dataframe, typically from [runsim()]. Replication order
@@ -12,18 +23,35 @@ is taken from the `ID` column when present, otherwise from row order.}
 
 \item{var}{Name of the numeric column to trace.}
 
-\item{by}{Character vector of condition columns; one panel is drawn per combination.
-`NULL` (default) traces the whole dataframe as one panel.}
+\item{by}{Character vector of condition columns; one panel is drawn per combination,
+in the order of their factor levels (numeric order for numbers). Strips read
+`name = value`. `NULL` (default) traces the whole dataframe as one panel.}
 
 \item{se_mult}{Half-width of the band in Monte Carlo standard errors (default 1).}
+
+\item{band}{`"auto"` (default: Wilson for a 0/1 column, Wald otherwise), `"wald"` or
+`"wilson"`.}
+
+\item{labels}{Optional named character vector of display names for columns
+(e.g. `c(n = "Sample size", rej = "Rejection rate")`), used in the axis and strips.}
+
+\item{scales}{Facet scales passed to [ggplot2::facet_wrap()] (default `"free_y"`).}
+
+\item{title, subtitle, caption}{Plot text; `NULL` (default) draws none.}
 }
 \value{
-A `ggplot` object.
+A `ggplot` object. Its data holds the `by` columns, `condition` (a factor in
+  panel order), `replication`, `estimate`, `lo` and `hi`.
 }
 \description{
 Plots the running mean of a quantity against the number of replications, with a
 Monte Carlo standard error band, one panel per simulation condition. It shows whether
 a run used enough replications for the quantity of interest to settle.
+}
+\details{
+For a 0/1 column (a running rejection rate or coverage) the default band is the
+Wilson score interval with `z = se_mult`, which stays inside \[0, 1\]; other columns
+get the Wald band `mean +/- se_mult * sd / sqrt(k)`.
 }
 \examples{
 \dontrun{
