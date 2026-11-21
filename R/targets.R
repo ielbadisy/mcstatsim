@@ -332,3 +332,26 @@ calcrelativermse <- function(estimates, true_param, digits = 4) {
 
   .mcstatsim_round(list(rel_rmse = relative_rmse, rel_rmse_mcse = relative_rmse_mcse), digits)
 }
+
+
+#' Calculate a Mean and its Monte Carlo Standard Error
+#'
+#' Computes the mean of a per-replicate quantity (a calibration slope, an estimated
+#' AUC, a sample size) and its Monte Carlo standard error, `sd / sqrt(k)` over the `k`
+#' values used. With `na.rm = TRUE`, replicates where the quantity could not be computed
+#' (`NA`, `NaN`, infinite) are left out of both, and `k` counts the kept values only.
+#'
+#' @param estimates A numeric vector, one value per replicate.
+#' @param na.rm Drop non-finite values before computing (default `FALSE`, as [mean()]).
+#' @param digits Number of decimal places to round the returned values to (values smaller than 1 in absolute value keep `digits` significant digits instead, so tiny values are not rounded to 0); `NULL` returns them unrounded. Default 4.
+#' @return A list with `mean`, `mean_mcse` and `n_valid` (the number of values used).
+#' @examples
+#' slope <- c(rnorm(98, 0.9, 0.1), NA, NaN)
+#' calcmean(slope, na.rm = TRUE)
+#' @export
+calcmean <- function(estimates, na.rm = FALSE, digits = 4) {
+  if (na.rm) estimates <- estimates[is.finite(estimates)]
+  k <- length(estimates)
+  c(.mcstatsim_round(list(mean = mean(estimates), mean_mcse = sd(estimates) / sqrt(k)), digits),
+    n_valid = k)
+}

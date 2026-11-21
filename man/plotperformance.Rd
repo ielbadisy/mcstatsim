@@ -17,7 +17,8 @@ plotperformance(
   scales = NULL,
   title = NULL,
   subtitle = NULL,
-  caption = NULL
+  caption = NULL,
+  theme = NULL
 )
 }
 \arguments{
@@ -25,7 +26,9 @@ plotperformance(
 
 \item{measure}{Name(s) of the estimate column(s) to plot (e.g. `"coverage"`, or
 `c("bias", "coverage")` for one row of panels per measure). Each Monte Carlo
-standard error is taken from `paste0(measure, "_mcse")` when that column exists.}
+standard error is taken from `paste0(measure, "_mcse")` when that column exists.
+Rows with a non-finite estimate (power when every null is true, say) are dropped
+silently; a non-finite MCSE draws the point without a bar.}
 
 \item{x}{Name of the column to place on the x axis (a design factor).}
 
@@ -38,11 +41,15 @@ standard error is taken from `paste0(measure, "_mcse")` when that column exists.
 \item{ref}{Optional numeric reference line(s) (e.g. `0.95` for coverage, `0` for
 bias). With several measures, a named vector (`c(bias = 0, coverage = 0.95)`) or one
 value per measure draws each line in its own panel; otherwise all lines go in
-every panel.}
+every panel. A data frame with a `yintercept` column and the `facet` column (and/or
+a `measure` column naming the measure) draws each line in its own facet, e.g.
+`data.frame(rr = c(0.75, 1), yintercept = c(0.9, 0.05))` for power and type I
+error in facets of `rr`.}
 
 \item{labels}{Optional named character vector of display names for columns, e.g.
 `c(n = "Sample size", coverage = "Coverage", method = "Method")`, used in the axes,
-legend and strips (strips read `name = value`).}
+legend and strips (strips read `name = value`; an empty name, `c(het = "")`, gives
+the bare value).}
 
 \item{palette}{Optional colour values for `colour`. The default uses blue and
 vermillion, then the Okabe-Ito palette (up to 8 groups; ggplot2's default beyond).}
@@ -51,6 +58,10 @@ vermillion, then the Okabe-Ito palette (up to 8 groups; ggplot2's default beyond
 `"free_y"` for several.}
 
 \item{title, subtitle, caption}{Plot text; `NULL` (default) draws none.}
+
+\item{theme}{A ggplot2 theme added to the plot. `NULL` (default) adds [ggplot2::theme_bw()]
+when the active theme is ggplot2's default, and nothing otherwise, so a theme set with
+[ggplot2::theme_set()] is respected.}
 }
 \value{
 A `ggplot` object. Only `x`, `y` and `colour` are mapped globally (to `.x`,
