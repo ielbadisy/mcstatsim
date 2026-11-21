@@ -11,15 +11,21 @@ plotperformance(
   colour = NULL,
   facet = NULL,
   se_mult = 2,
-  ref = NULL
+  ref = NULL,
+  labels = NULL,
+  palette = NULL,
+  scales = NULL,
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL
 )
 }
 \arguments{
 \item{summary}{A dataframe from [summarisesim()].}
 
-\item{measure}{Name of the estimate column to plot (e.g. `"coverage"`). Its Monte
-Carlo standard error is taken from `paste0(measure, "_mcse")` when that column
-exists.}
+\item{measure}{Name(s) of the estimate column(s) to plot (e.g. `"coverage"`, or
+`c("bias", "coverage")` for one row of panels per measure). Each Monte Carlo
+standard error is taken from `paste0(measure, "_mcse")` when that column exists.}
 
 \item{x}{Name of the column to place on the x axis (a design factor).}
 
@@ -29,15 +35,33 @@ exists.}
 
 \item{se_mult}{Half-height of the error bar in Monte Carlo standard errors (default 2).}
 
-\item{ref}{Optional numeric reference line (e.g. `0.95` for coverage, `0` for bias).}
+\item{ref}{Optional numeric reference line(s) (e.g. `0.95` for coverage, `0` for
+bias). With several measures, a named vector (`c(bias = 0, coverage = 0.95)`) or one
+value per measure draws each line in its own panel; otherwise all lines go in
+every panel.}
+
+\item{labels}{Optional named character vector of display names for columns, e.g.
+`c(n = "Sample size", coverage = "Coverage", method = "Method")`, used in the axes,
+legend and strips (strips read `name = value`).}
+
+\item{palette}{Optional colour values for `colour`. The default uses blue and
+vermillion, then the Okabe-Ito palette (up to 8 groups; ggplot2's default beyond).}
+
+\item{scales}{Facet scales. `NULL` (default) means `"fixed"` for one measure and
+`"free_y"` for several.}
+
+\item{title, subtitle, caption}{Plot text; `NULL` (default) draws none.}
 }
 \value{
-A `ggplot` object.
+A `ggplot` object. Only `x`, `y` and `colour` are mapped globally (to `.x`,
+  `.value` and `.colour`), so layers added with `+` need no `inherit.aes = FALSE`;
+  the error bar uses `.lo` and `.hi`, and all columns of `summary` are kept.
 }
 \description{
-Takes a summary table from [summarisesim()] and plots one performance measure per
-condition as a point with a Monte Carlo error bar (`estimate +/- se_mult * MCSE`),
-the standard "does the method work across the design" picture.
+Takes a summary table from [summarisesim()] and plots one or more performance
+measures per condition as a point with a Monte Carlo error bar
+(`estimate +/- se_mult * MCSE`), the standard "does the method work across the
+design" picture.
 }
 \examples{
 \dontrun{

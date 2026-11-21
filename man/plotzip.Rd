@@ -4,19 +4,48 @@
 \alias{plotzip}
 \title{Zip Plot of Confidence-Interval Coverage}
 \usage{
-plotzip(data, lower, upper, true, by = NULL, conf_level = 0.95)
+plotzip(
+  data,
+  lower,
+  upper,
+  true,
+  by = NULL,
+  conf_level = 0.95,
+  labels = NULL,
+  scales = "fixed",
+  colours = c(covers = "#0072B2", misses = "#D55E00"),
+  title = NULL,
+  subtitle = NULL,
+  caption = NULL
+)
 }
 \arguments{
 \item{data}{A replicate-level dataframe, typically from [runsim()].}
 
-\item{lower, upper, true}{Column names of the interval bounds and the target value.}
+\item{lower, upper}{Column names of the interval bounds.}
 
-\item{by}{Character vector of condition columns; one panel per combination.}
+\item{true}{Column name of the target value, or the target value itself (a number).}
+
+\item{by}{Character vector of condition columns; one panel per combination, in the
+order of their factor levels (numeric order for numbers). Strips read
+`name = value`. The `by` columns are kept in the plot data, so
+`+ facet_wrap(~ method)` works.}
 
 \item{conf_level}{Nominal confidence level the intervals were built at (default 0.95).}
+
+\item{labels}{Optional named character vector of display names for the `by` columns
+(e.g. `c(n = "Sample size")`), used in the strips.}
+
+\item{scales}{Facet scales passed to [ggplot2::facet_wrap()]. The default `"fixed"`
+puts all panels on one x axis so intervals can be compared across conditions.}
+
+\item{colours}{Colours of the covering and non-covering intervals.}
+
+\item{title, subtitle, caption}{Plot text; `NULL` (default) draws none.}
 }
 \value{
-A `ggplot` object.
+A `ggplot` object. Its data holds the `by` columns, `condition` (a factor in
+  panel order), `centile`, `lo`, `hi`, `true` and `covers`.
 }
 \description{
 Draws the zip plot of Morris, White and Crowther (2019): within each condition the
