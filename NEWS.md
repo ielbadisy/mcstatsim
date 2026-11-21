@@ -1,3 +1,10 @@
+# mcstatsim 0.9.8
+
+* `runsim(backend = "psock")` (the default on Windows): workers now use the library paths of
+  the calling session, so a package installed in a non-default library (R CMD check, renv,
+  a library set with `.libPaths()`) is found. The Windows vignette build failed with
+  "there is no package called 'mcstatsim'".
+
 # mcstatsim 0.9.7
 
 Plot fixes. The look of the three plots changes (bug fixes); no numeric result changes and

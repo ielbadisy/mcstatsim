@@ -412,12 +412,13 @@ runsim <- function(n, grid_params, sim_func, show_progress = TRUE, num_cores = p
   base_pkgs <- c("base", "stats", "graphics", "grDevices", "utils", "datasets", "methods")
   attached <- sub("^package:", "", grep("^package:", search(), value = TRUE))
   attached <- rev(setdiff(attached, base_pkgs))
-  if (length(attached)) {
-    parallel::clusterCall(cl, function(pkgs) {
-      for (p in pkgs) suppressPackageStartupMessages(library(p, character.only = TRUE))
-      NULL
-    }, attached)
-  }
+  # workers start with the default library paths; a package installed in a temporary
+  # library (R CMD check, renv, a user library set in the session) must stay findable
+  parallel::clusterCall(cl, function(lib, pkgs) {
+    .libPaths(lib)
+    for (p in pkgs) suppressPackageStartupMessages(library(p, character.only = TRUE))
+    NULL
+  }, .libPaths(), attached)
 
   globals <- .runsim_globals(sim_func)
   if (length(globals)) parallel::clusterExport(cl, globals, envir = globalenv())
